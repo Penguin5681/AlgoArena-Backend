@@ -8,10 +8,11 @@ export const createTeam = async (req: Request, res: Response) => {
     const { name } = req.body;
 
     try {
-        const existing = await pool.query("SELECT team_id FROM users WHERE id = $1", [userId]);
-        if (existing.rows[0]?.team_id) {
-            return res.status(404).json({ error: 'User already in a team' });
+        const existing = await pool.query("SELECT * FROM team_members WHERE user_id = $1", [userId]);
+        if (existing.rowCount && existing.rowCount > 0) {
+            return res.status(400).json({ error: 'User already in a team' });
         }
+
 
         let joinCode: string;
         while (true) {
@@ -27,7 +28,7 @@ export const createTeam = async (req: Request, res: Response) => {
 
         await pool.query(
             'INSERT INTO team_members (user_id, team_id, is_admin) VALUES ($1, $2, $3)',
-            [userId, teamId, true]  // team creator is admin
+            [userId, teamId, true]
         );
 
         res.status(201).json({ teamId, joinCode });
@@ -81,7 +82,7 @@ export const getTeamInfo = async (req: Request, res: Response) => {
         const team = teamRes.rows[0];
 
         const membersRes = await pool.query(`
-          SELECT u.name, u.email, tm.is_admin
+          SELECT u.username, u.email, u.profile_picture, tm.is_admin
           FROM users u
           JOIN team_members tm ON tm.user_id = u.id
           WHERE tm.team_id = $1
@@ -130,33 +131,54 @@ export const leaveTeam = async (req: Request, res: Response) => {
 
 export const promoteToAdmin = async (req: Request, res: Response) => {
     const adminId = (req as any).user.id;
-    const { targetUserId } = req.body;
+    const { targetUserEmail } = req.body;
 
-    const res1 = await pool.query(`
-    SELECT team_id, is_admin FROM team_members WHERE user_id = $1
-  `, [adminId]);
+    try {
+        const adminCheck = await pool.query(`
+            SELECT team_id, is_admin FROM team_members WHERE user_id = $1
+        `, [adminId]);
 
-    if (!res1.rows[0]?.is_admin) {
-        return res.status(403).json({ error: "Only admins can promote others" });
+        if (adminCheck.rowCount === 0 || !adminCheck.rows[0]?.is_admin) {
+            return res.status(403).json({ error: "Only admins can promote others" });
+        }
+
+        const teamId = adminCheck.rows[0].team_id;
+
+        const userQuery = await pool.query(`
+            SELECT id FROM users WHERE email = $1
+        `, [targetUserEmail]);
+
+        if (userQuery.rowCount === 0) {
+            return res.status(404).json({ error: "User with this email not found" });
+        }
+
+        const targetUserId = userQuery.rows[0].id;
+
+        const teamCheck = await pool.query(`
+            SELECT * FROM team_members WHERE user_id = $1 AND team_id = $2
+        `, [targetUserId, teamId]);
+
+        if (teamCheck.rowCount === 0) {
+            return res.status(400).json({ error: "Target user is not in your team" });
+        }
+
+        if (teamCheck.rows[0].is_admin) {
+            return res.status(400).json({ error: "User is already an admin" });
+        }
+
+        await pool.query(`
+            UPDATE team_members SET is_admin = true WHERE user_id = $1 AND team_id = $2
+        `, [targetUserId, teamId]);
+
+        res.json({ 
+            message: "User promoted to admin successfully",
+            user: targetUserEmail
+        });
+    } catch (err) {
+        console.error("Error promoting user to admin:", err);
+        res.status(500).json({ error: "Server error while promoting user" });
     }
-
-    const teamId = res1.rows[0].team_id;
-
-    const res2 = await pool.query(`
-    SELECT * FROM team_members WHERE user_id = $1 AND team_id = $2
-  `, [targetUserId, teamId]);
-
-    if (res2.rowCount === 0) {
-        return res.status(400).json({ error: "Target user is not in the same team" });
-    }
-
-    await pool.query(`
-    UPDATE team_members SET is_admin = true WHERE user_id = $1
-  `, [targetUserId]);
-
-    res.json({ message: "User promoted to admin" });
 };
-
 
 
 export const deleteTeam = async (req: Request, res: Response) => {
@@ -178,4 +200,39 @@ export const deleteTeam = async (req: Request, res: Response) => {
     // Delete team
     await pool.query('DELETE FROM teams WHERE id = $1', [teamId]);
     res.json({ message: "Team deleted and all members removed" });
+};
+
+export const getCurrentTeam = async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+
+  try {
+    const teamRes = await pool.query(`
+      SELECT t.id, t.name, t.join_code, t.created_at
+      FROM teams t
+      JOIN team_members tm ON t.id = tm.team_id
+      WHERE tm.user_id = $1
+    `, [userId]);
+
+    if (teamRes.rowCount === 0) {
+      return res.status(404).json({ error: "User is not in a team" });
+    }
+
+    const team = teamRes.rows[0];
+
+    const membersRes = await pool.query(`
+      SELECT u.username, u.email, u.profile_picture, tm.is_admin
+      FROM users u
+      JOIN team_members tm ON u.id = tm.user_id
+      WHERE tm.team_id = $1
+    `, [team.id]);
+
+    res.json({
+      ...team,
+      members: membersRes.rows
+    });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error while fetching team info" });
+  }
 };
