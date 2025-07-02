@@ -236,3 +236,53 @@ export const getCurrentTeam = async (req: Request, res: Response) => {
     res.status(500).json({ error: "Server error while fetching team info" });
   }
 };
+
+
+export const demoteAdmin = async (req: Request, res: Response) => {
+  const adminId = (req as any).user.id;
+  const { targetUserEmail } = req.body;
+
+  try {
+    const adminRes = await pool.query(`
+      SELECT team_id, is_admin FROM team_members WHERE user_id = $1
+    `, [adminId]);
+
+    if (adminRes.rowCount === 0 || !adminRes.rows[0].is_admin) {
+      return res.status(403).json({ error: "Only admins can perform this action" });
+    }
+
+    const teamId = adminRes.rows[0].team_id;
+
+    const targetUserRes = await pool.query(`
+      SELECT id FROM users WHERE email = $1
+    `, [targetUserEmail]);
+
+    if (targetUserRes.rowCount === 0) {
+      return res.status(404).json({ error: "Target user not found" });
+    }
+
+    const targetUserId = targetUserRes.rows[0].id;
+
+    if (targetUserId === adminId) {
+      return res.status(400).json({ error: "You cannot demote yourself" });
+    }
+
+    const teamMemberRes = await pool.query(`
+      SELECT * FROM team_members WHERE user_id = $1 AND team_id = $2
+    `, [targetUserId, teamId]);
+
+    if (teamMemberRes.rowCount === 0) {
+      return res.status(400).json({ error: "User is not in your team" });
+    }
+
+    await pool.query(`
+      UPDATE team_members SET is_admin = false WHERE user_id = $1
+    `, [targetUserId]);
+
+    res.json({ message: "User demoted from admin successfully" });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error while demoting admin" });
+  }
+};
