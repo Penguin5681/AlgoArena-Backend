@@ -1,0 +1,8 @@
+[33m[nodemon] 3.1.10[39m
+[33m[nodemon] to restart at any time, enter `rs`[39m
+[33m[nodemon] watching path(s): *.*[39m
+[33m[nodemon] watching extensions: ts,json[39m
+[32m[nodemon] starting `ts-node src/index.ts`[39m
+[dotenv@17.0.0] injecting env (3) from .env – 🔐 encrypt with dotenvx: https://dotenvx.com
+[dotenv@17.0.0] injecting env (3) from .env – 🔐 encrypt with dotenvx: https://dotenvx.com
+Server running on port 5000
