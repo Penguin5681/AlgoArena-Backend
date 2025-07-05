@@ -5,12 +5,9 @@
 -- Dumped from database version 16.9 (Ubuntu 16.9-1.pgdg24.04+1)
 -- Dumped by pg_dump version 17.5 (Ubuntu 17.5-1.pgdg24.04+1)
 
--- Started on 2025-07-04 16:53:22 IST
-
 SET statement_timeout = 0;
 SET lock_timeout = 0;
 SET idle_in_transaction_session_timeout = 0;
-SET transaction_timeout = 0;
 SET client_encoding = 'UTF8';
 SET standard_conforming_strings = on;
 SELECT pg_catalog.set_config('search_path', '', false);
@@ -19,31 +16,91 @@ SET xmloption = content;
 SET client_min_messages = warning;
 SET row_security = off;
 
-DROP DATABASE IF EXISTS rds_clone;
+ALTER TABLE IF EXISTS ONLY public.user_xp_log DROP CONSTRAINT IF EXISTS user_xp_log_user_id_fkey;
+ALTER TABLE IF EXISTS ONLY public.user_total_xp DROP CONSTRAINT IF EXISTS user_total_xp_user_id_fkey;
+ALTER TABLE IF EXISTS ONLY public.user_topic_progress DROP CONSTRAINT IF EXISTS user_topic_progress_user_id_fkey;
+ALTER TABLE IF EXISTS ONLY public.user_topic_progress DROP CONSTRAINT IF EXISTS user_topic_progress_topic_id_fkey;
+ALTER TABLE IF EXISTS ONLY public.user_question_progress DROP CONSTRAINT IF EXISTS user_question_progress_user_id_fkey;
+ALTER TABLE IF EXISTS ONLY public.user_question_progress DROP CONSTRAINT IF EXISTS user_question_progress_question_id_fkey;
+ALTER TABLE IF EXISTS ONLY public.topic_code_examples DROP CONSTRAINT IF EXISTS topic_code_examples_topic_id_fkey;
+ALTER TABLE IF EXISTS ONLY public.teams DROP CONSTRAINT IF EXISTS teams_created_by_fkey;
+ALTER TABLE IF EXISTS ONLY public.team_members DROP CONSTRAINT IF EXISTS team_members_user_id_fkey;
+ALTER TABLE IF EXISTS ONLY public.team_members DROP CONSTRAINT IF EXISTS team_members_team_id_fkey;
+ALTER TABLE IF EXISTS ONLY public.questions DROP CONSTRAINT IF EXISTS questions_topic_id_fkey;
+ALTER TABLE IF EXISTS ONLY public.mcqs DROP CONSTRAINT IF EXISTS mcqs_topic_id_fkey;
+ALTER TABLE IF EXISTS ONLY public.coding_problem_topics DROP CONSTRAINT IF EXISTS coding_problem_topics_topic_id_fkey;
+ALTER TABLE IF EXISTS ONLY public.coding_problem_topics DROP CONSTRAINT IF EXISTS coding_problem_topics_problem_id_fkey;
+ALTER TABLE IF EXISTS ONLY public.coding_problem_testcases DROP CONSTRAINT IF EXISTS coding_problem_testcases_problem_id_fkey;
+DROP TRIGGER IF EXISTS trg_update_total_xp_on_log ON public.user_xp_log;
+DROP TRIGGER IF EXISTS trg_insert_user_total_xp ON public.users;
+DROP INDEX IF EXISTS public.idx_testcase_problem;
+DROP INDEX IF EXISTS public.idx_submissions_user_id;
+DROP INDEX IF EXISTS public.idx_submissions_status;
+DROP INDEX IF EXISTS public.idx_problem_topic_id;
+DROP INDEX IF EXISTS public.idx_problem_difficulty;
+ALTER TABLE IF EXISTS ONLY public.users DROP CONSTRAINT IF EXISTS users_username_key;
+ALTER TABLE IF EXISTS ONLY public.users DROP CONSTRAINT IF EXISTS users_pkey;
+ALTER TABLE IF EXISTS ONLY public.users DROP CONSTRAINT IF EXISTS users_email_key;
+ALTER TABLE IF EXISTS ONLY public.user_xp_log DROP CONSTRAINT IF EXISTS user_xp_log_pkey;
+ALTER TABLE IF EXISTS ONLY public.user_total_xp DROP CONSTRAINT IF EXISTS user_total_xp_pkey;
+ALTER TABLE IF EXISTS ONLY public.user_total_xp DROP CONSTRAINT IF EXISTS user_total_xp_email_key;
+ALTER TABLE IF EXISTS ONLY public.user_topic_progress DROP CONSTRAINT IF EXISTS user_topic_progress_user_topic_unique;
+ALTER TABLE IF EXISTS ONLY public.user_topic_progress DROP CONSTRAINT IF EXISTS user_topic_progress_pkey;
+ALTER TABLE IF EXISTS ONLY public.user_question_progress DROP CONSTRAINT IF EXISTS user_question_progress_user_question_unique;
+ALTER TABLE IF EXISTS ONLY public.user_question_progress DROP CONSTRAINT IF EXISTS user_question_progress_pkey;
+ALTER TABLE IF EXISTS ONLY public.user_xp_log DROP CONSTRAINT IF EXISTS unique_user_xp_log_entry;
+ALTER TABLE IF EXISTS ONLY public.topics DROP CONSTRAINT IF EXISTS topics_slug_key;
+ALTER TABLE IF EXISTS ONLY public.topics DROP CONSTRAINT IF EXISTS topics_pkey;
+ALTER TABLE IF EXISTS ONLY public.topic_code_examples DROP CONSTRAINT IF EXISTS topic_code_examples_pkey;
+ALTER TABLE IF EXISTS ONLY public.teams DROP CONSTRAINT IF EXISTS teams_pkey;
+ALTER TABLE IF EXISTS ONLY public.teams DROP CONSTRAINT IF EXISTS teams_join_code_key;
+ALTER TABLE IF EXISTS ONLY public.team_members DROP CONSTRAINT IF EXISTS team_members_pkey;
+ALTER TABLE IF EXISTS ONLY public.submissions DROP CONSTRAINT IF EXISTS submissions_pkey;
+ALTER TABLE IF EXISTS ONLY public.questions DROP CONSTRAINT IF EXISTS questions_pkey;
+ALTER TABLE IF EXISTS ONLY public.problem_topics DROP CONSTRAINT IF EXISTS problem_topics_pkey;
+ALTER TABLE IF EXISTS ONLY public.problem_topics DROP CONSTRAINT IF EXISTS problem_topics_name_key;
+ALTER TABLE IF EXISTS ONLY public.mcqs DROP CONSTRAINT IF EXISTS mcqs_pkey;
+ALTER TABLE IF EXISTS ONLY public.coding_problems DROP CONSTRAINT IF EXISTS coding_problems_pkey;
+ALTER TABLE IF EXISTS ONLY public.coding_problem_topics DROP CONSTRAINT IF EXISTS coding_problem_topics_pkey;
+ALTER TABLE IF EXISTS ONLY public.coding_problem_testcases DROP CONSTRAINT IF EXISTS coding_problem_testcases_pkey;
+ALTER TABLE IF EXISTS public.users ALTER COLUMN id DROP DEFAULT;
+ALTER TABLE IF EXISTS public.user_xp_log ALTER COLUMN id DROP DEFAULT;
+ALTER TABLE IF EXISTS public.user_topic_progress ALTER COLUMN id DROP DEFAULT;
+ALTER TABLE IF EXISTS public.user_question_progress ALTER COLUMN id DROP DEFAULT;
+ALTER TABLE IF EXISTS public.topic_code_examples ALTER COLUMN id DROP DEFAULT;
+ALTER TABLE IF EXISTS public.teams ALTER COLUMN id DROP DEFAULT;
+ALTER TABLE IF EXISTS public.submissions ALTER COLUMN submission_id DROP DEFAULT;
+ALTER TABLE IF EXISTS public.problem_topics ALTER COLUMN id DROP DEFAULT;
+ALTER TABLE IF EXISTS public.coding_problem_testcases ALTER COLUMN id DROP DEFAULT;
+DROP SEQUENCE IF EXISTS public.users_id_seq;
+DROP TABLE IF EXISTS public.users;
+DROP SEQUENCE IF EXISTS public.user_xp_log_id_seq;
+DROP TABLE IF EXISTS public.user_xp_log;
+DROP TABLE IF EXISTS public.user_total_xp;
+DROP SEQUENCE IF EXISTS public.user_topic_progress_id_seq;
+DROP TABLE IF EXISTS public.user_topic_progress;
+DROP SEQUENCE IF EXISTS public.user_question_progress_id_seq;
+DROP TABLE IF EXISTS public.user_question_progress;
+DROP TABLE IF EXISTS public.topics;
+DROP SEQUENCE IF EXISTS public.topic_code_examples_id_seq;
+DROP TABLE IF EXISTS public.topic_code_examples;
+DROP SEQUENCE IF EXISTS public.teams_id_seq;
+DROP TABLE IF EXISTS public.teams;
+DROP TABLE IF EXISTS public.team_members;
+DROP SEQUENCE IF EXISTS public.submissions_submission_id_seq;
+DROP TABLE IF EXISTS public.submissions;
+DROP TABLE IF EXISTS public.questions;
+DROP SEQUENCE IF EXISTS public.problem_topics_id_seq;
+DROP TABLE IF EXISTS public.problem_topics;
+DROP TABLE IF EXISTS public.mcqs;
+DROP TABLE IF EXISTS public.coding_problems;
+DROP TABLE IF EXISTS public.coding_problem_topics;
+DROP SEQUENCE IF EXISTS public.coding_problem_testcases_id_seq;
+DROP TABLE IF EXISTS public.coding_problem_testcases;
+DROP FUNCTION IF EXISTS public.update_user_total_xp_on_log();
+DROP FUNCTION IF EXISTS public.insert_user_total_xp();
+DROP TYPE IF EXISTS public.submission_status;
 --
--- TOC entry 3582 (class 1262 OID 16707)
--- Name: rds_clone; Type: DATABASE; Schema: -; Owner: -
---
-
-CREATE DATABASE rds_clone WITH TEMPLATE = template0 ENCODING = 'UTF8' LOCALE_PROVIDER = libc LOCALE = 'en_US.UTF-8';
-
-
-connect rds_clone
-
-SET statement_timeout = 0;
-SET lock_timeout = 0;
-SET idle_in_transaction_session_timeout = 0;
-SET transaction_timeout = 0;
-SET client_encoding = 'UTF8';
-SET standard_conforming_strings = on;
-SELECT pg_catalog.set_config('search_path', '', false);
-SET check_function_bodies = false;
-SET xmloption = content;
-SET client_min_messages = warning;
-SET row_security = off;
-
---
--- TOC entry 893 (class 1247 OID 16926)
 -- Name: submission_status; Type: TYPE; Schema: public; Owner: -
 --
 
@@ -56,7 +113,6 @@ CREATE TYPE public.submission_status AS ENUM (
 
 
 --
--- TOC entry 234 (class 1255 OID 16889)
 -- Name: insert_user_total_xp(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -70,7 +126,6 @@ END;$$;
 
 
 --
--- TOC entry 235 (class 1255 OID 16891)
 -- Name: update_user_total_xp_on_log(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -91,7 +146,68 @@ SET default_tablespace = '';
 SET default_table_access_method = heap;
 
 --
--- TOC entry 224 (class 1259 OID 16795)
+-- Name: coding_problem_testcases; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.coding_problem_testcases (
+    id integer NOT NULL,
+    problem_id text NOT NULL,
+    input text NOT NULL,
+    expected_output text NOT NULL,
+    is_sample boolean DEFAULT false
+);
+
+
+--
+-- Name: coding_problem_testcases_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.coding_problem_testcases_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: coding_problem_testcases_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.coding_problem_testcases_id_seq OWNED BY public.coding_problem_testcases.id;
+
+
+--
+-- Name: coding_problem_topics; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.coding_problem_topics (
+    problem_id text NOT NULL,
+    topic_id integer NOT NULL
+);
+
+
+--
+-- Name: coding_problems; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.coding_problems (
+    id text NOT NULL,
+    title text NOT NULL,
+    description text NOT NULL,
+    constraints text NOT NULL,
+    difficulty text NOT NULL,
+    time_complexity text NOT NULL,
+    space_complexity text NOT NULL,
+    hints text[],
+    xp integer NOT NULL,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT coding_problems_difficulty_check CHECK ((difficulty = ANY (ARRAY['easy'::text, 'medium'::text, 'hard'::text])))
+);
+
+
+--
 -- Name: mcqs; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -105,7 +221,36 @@ CREATE TABLE public.mcqs (
 
 
 --
--- TOC entry 223 (class 1259 OID 16781)
+-- Name: problem_topics; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.problem_topics (
+    id integer NOT NULL,
+    name text NOT NULL
+);
+
+
+--
+-- Name: problem_topics_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.problem_topics_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: problem_topics_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.problem_topics_id_seq OWNED BY public.problem_topics.id;
+
+
+--
 -- Name: questions; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -122,7 +267,6 @@ CREATE TABLE public.questions (
 
 
 --
--- TOC entry 233 (class 1259 OID 25079)
 -- Name: submissions; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -144,7 +288,6 @@ CREATE TABLE public.submissions (
 
 
 --
--- TOC entry 232 (class 1259 OID 25078)
 -- Name: submissions_submission_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
@@ -158,8 +301,6 @@ CREATE SEQUENCE public.submissions_submission_id_seq
 
 
 --
--- TOC entry 3583 (class 0 OID 0)
--- Dependencies: 232
 -- Name: submissions_submission_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
@@ -167,7 +308,6 @@ ALTER SEQUENCE public.submissions_submission_id_seq OWNED BY public.submissions.
 
 
 --
--- TOC entry 219 (class 1259 OID 16738)
 -- Name: team_members; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -179,7 +319,6 @@ CREATE TABLE public.team_members (
 
 
 --
--- TOC entry 218 (class 1259 OID 16722)
 -- Name: teams; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -193,7 +332,6 @@ CREATE TABLE public.teams (
 
 
 --
--- TOC entry 217 (class 1259 OID 16721)
 -- Name: teams_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
@@ -207,8 +345,6 @@ CREATE SEQUENCE public.teams_id_seq
 
 
 --
--- TOC entry 3584 (class 0 OID 0)
--- Dependencies: 217
 -- Name: teams_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
@@ -216,7 +352,6 @@ ALTER SEQUENCE public.teams_id_seq OWNED BY public.teams.id;
 
 
 --
--- TOC entry 222 (class 1259 OID 16767)
 -- Name: topic_code_examples; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -230,7 +365,6 @@ CREATE TABLE public.topic_code_examples (
 
 
 --
--- TOC entry 221 (class 1259 OID 16766)
 -- Name: topic_code_examples_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
@@ -244,8 +378,6 @@ CREATE SEQUENCE public.topic_code_examples_id_seq
 
 
 --
--- TOC entry 3585 (class 0 OID 0)
--- Dependencies: 221
 -- Name: topic_code_examples_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
@@ -253,7 +385,6 @@ ALTER SEQUENCE public.topic_code_examples_id_seq OWNED BY public.topic_code_exam
 
 
 --
--- TOC entry 220 (class 1259 OID 16754)
 -- Name: topics; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -271,7 +402,6 @@ CREATE TABLE public.topics (
 
 
 --
--- TOC entry 228 (class 1259 OID 16827)
 -- Name: user_question_progress; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -287,7 +417,6 @@ CREATE TABLE public.user_question_progress (
 
 
 --
--- TOC entry 227 (class 1259 OID 16826)
 -- Name: user_question_progress_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
@@ -301,8 +430,6 @@ CREATE SEQUENCE public.user_question_progress_id_seq
 
 
 --
--- TOC entry 3586 (class 0 OID 0)
--- Dependencies: 227
 -- Name: user_question_progress_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
@@ -310,7 +437,6 @@ ALTER SEQUENCE public.user_question_progress_id_seq OWNED BY public.user_questio
 
 
 --
--- TOC entry 226 (class 1259 OID 16808)
 -- Name: user_topic_progress; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -324,7 +450,6 @@ CREATE TABLE public.user_topic_progress (
 
 
 --
--- TOC entry 225 (class 1259 OID 16807)
 -- Name: user_topic_progress_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
@@ -338,8 +463,6 @@ CREATE SEQUENCE public.user_topic_progress_id_seq
 
 
 --
--- TOC entry 3587 (class 0 OID 0)
--- Dependencies: 225
 -- Name: user_topic_progress_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
@@ -347,7 +470,6 @@ ALTER SEQUENCE public.user_topic_progress_id_seq OWNED BY public.user_topic_prog
 
 
 --
--- TOC entry 229 (class 1259 OID 16847)
 -- Name: user_total_xp; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -359,7 +481,6 @@ CREATE TABLE public.user_total_xp (
 
 
 --
--- TOC entry 231 (class 1259 OID 16863)
 -- Name: user_xp_log; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -374,7 +495,6 @@ CREATE TABLE public.user_xp_log (
 
 
 --
--- TOC entry 230 (class 1259 OID 16862)
 -- Name: user_xp_log_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
@@ -388,8 +508,6 @@ CREATE SEQUENCE public.user_xp_log_id_seq
 
 
 --
--- TOC entry 3588 (class 0 OID 0)
--- Dependencies: 230
 -- Name: user_xp_log_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
@@ -397,7 +515,6 @@ ALTER SEQUENCE public.user_xp_log_id_seq OWNED BY public.user_xp_log.id;
 
 
 --
--- TOC entry 216 (class 1259 OID 16709)
 -- Name: users; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -412,7 +529,6 @@ CREATE TABLE public.users (
 
 
 --
--- TOC entry 215 (class 1259 OID 16708)
 -- Name: users_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
@@ -426,8 +542,6 @@ CREATE SEQUENCE public.users_id_seq
 
 
 --
--- TOC entry 3589 (class 0 OID 0)
--- Dependencies: 215
 -- Name: users_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
@@ -435,7 +549,20 @@ ALTER SEQUENCE public.users_id_seq OWNED BY public.users.id;
 
 
 --
--- TOC entry 3352 (class 2604 OID 25082)
+-- Name: coding_problem_testcases id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.coding_problem_testcases ALTER COLUMN id SET DEFAULT nextval('public.coding_problem_testcases_id_seq'::regclass);
+
+
+--
+-- Name: problem_topics id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.problem_topics ALTER COLUMN id SET DEFAULT nextval('public.problem_topics_id_seq'::regclass);
+
+
+--
 -- Name: submissions submission_id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -443,7 +570,6 @@ ALTER TABLE ONLY public.submissions ALTER COLUMN submission_id SET DEFAULT nextv
 
 
 --
--- TOC entry 3339 (class 2604 OID 16725)
 -- Name: teams id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -451,7 +577,6 @@ ALTER TABLE ONLY public.teams ALTER COLUMN id SET DEFAULT nextval('public.teams_
 
 
 --
--- TOC entry 3343 (class 2604 OID 16770)
 -- Name: topic_code_examples id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -459,7 +584,6 @@ ALTER TABLE ONLY public.topic_code_examples ALTER COLUMN id SET DEFAULT nextval(
 
 
 --
--- TOC entry 3346 (class 2604 OID 16830)
 -- Name: user_question_progress id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -467,7 +591,6 @@ ALTER TABLE ONLY public.user_question_progress ALTER COLUMN id SET DEFAULT nextv
 
 
 --
--- TOC entry 3345 (class 2604 OID 16811)
 -- Name: user_topic_progress id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -475,7 +598,6 @@ ALTER TABLE ONLY public.user_topic_progress ALTER COLUMN id SET DEFAULT nextval(
 
 
 --
--- TOC entry 3350 (class 2604 OID 16866)
 -- Name: user_xp_log id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -483,7 +605,6 @@ ALTER TABLE ONLY public.user_xp_log ALTER COLUMN id SET DEFAULT nextval('public.
 
 
 --
--- TOC entry 3338 (class 2604 OID 16712)
 -- Name: users id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -491,8 +612,77 @@ ALTER TABLE ONLY public.users ALTER COLUMN id SET DEFAULT nextval('public.users_
 
 
 --
--- TOC entry 3567 (class 0 OID 16795)
--- Dependencies: 224
+-- Data for Name: coding_problem_testcases; Type: TABLE DATA; Schema: public; Owner: -
+--
+
+COPY public.coding_problem_testcases (id, problem_id, input, expected_output, is_sample) FROM stdin;
+1	two-sum	nums = [2,7,11,15], target = 9	[0,1]	t
+2	two-sum	nums = [3,2,4], target = 6	[1,2]	t
+3	two-sum	nums = [3,3], target = 6	[0,1]	t
+4	valid-parentheses	s = "()"	true	t
+5	valid-parentheses	s = "()[]{}"	true	t
+6	valid-parentheses	s = "(]"	false	t
+7	merge-two-sorted-lists	list1 = [1,2,4], list2 = [1,3,4]	[1,1,2,3,4,4]	t
+8	merge-two-sorted-lists	list1 = [], list2 = []	[]	t
+9	merge-two-sorted-lists	list1 = [], list2 = [0]	[0]	t
+10	maximum-subarray	nums = [-2,1,-3,4,-1,2,1,-5,4]	6	t
+11	maximum-subarray	nums = [1]	1	t
+12	maximum-subarray	nums = [5,4,-1,7,8]	23	t
+13	binary-tree-level-order-traversal	root = [3,9,20,null,null,15,7]	[[3],[9,20],[15,7]]	t
+14	binary-tree-level-order-traversal	root = [1]	[[1]]	t
+15	binary-tree-level-order-traversal	root = []	[]	t
+16	longest-increasing-subsequence	nums = [10,9,2,5,3,7,101,18]	4	t
+17	longest-increasing-subsequence	nums = [0,1,0,3,2,3]	4	t
+18	longest-increasing-subsequence	nums = [7,7,7,7,7,7,7]	1	t
+19	regular-expression-matching	s = "aa", p = "a"	false	t
+20	regular-expression-matching	s = "aa", p = "a*"	true	t
+21	regular-expression-matching	s = "ab", p = ".*"	true	t
+22	median-of-two-sorted-arrays	nums1 = [1,3], nums2 = [2]	2.00000	t
+23	median-of-two-sorted-arrays	nums1 = [1,2], nums2 = [3,4]	2.50000	t
+24	climbing-stairs	n = 2	2	t
+25	climbing-stairs	n = 3	3	t
+26	best-time-to-buy-and-sell-stock	prices = [7,1,5,3,6,4]	5	t
+27	best-time-to-buy-and-sell-stock	prices = [7,6,4,3,1]	0	t
+\.
+
+
+--
+-- Data for Name: coding_problem_topics; Type: TABLE DATA; Schema: public; Owner: -
+--
+
+COPY public.coding_problem_topics (problem_id, topic_id) FROM stdin;
+two-sum	1
+valid-parentheses	2
+merge-two-sorted-lists	3
+maximum-subarray	4
+binary-tree-level-order-traversal	5
+longest-increasing-subsequence	4
+regular-expression-matching	4
+median-of-two-sorted-arrays	6
+climbing-stairs	4
+best-time-to-buy-and-sell-stock	1
+\.
+
+
+--
+-- Data for Name: coding_problems; Type: TABLE DATA; Schema: public; Owner: -
+--
+
+COPY public.coding_problems (id, title, description, constraints, difficulty, time_complexity, space_complexity, hints, xp, created_at) FROM stdin;
+two-sum	Two Sum	Given an array of integers nums and an integer target, return indices of the two numbers such that they add up to target.\n\nYou may assume that each input would have exactly one solution, and you may not use the same element twice.\n\nYou can return the answer in any order.	2 <= nums.length <= 10^4\n-10^9 <= nums[i] <= 10^9\n-10^9 <= target <= 10^9\nOnly one valid answer exists	easy	O(n)	O(n)	{"A really brute force way would be to search for all possible pairs of numbers but that would be too slow. Again, it's best to try out brute force solutions for just for completeness. It is from these brute force solutions that you can come up with optimizations.","So, if we fix one of the numbers, say x, we have to scan the entire array to find the next number y which is value - x where value is the input parameter. Can we change our array somehow so that this search becomes faster?","The second train of thought is, without changing the array, can we use additional space somehow? Like maybe a hash map to speed up the search?"}	10	2025-07-05 16:29:06.712774
+valid-parentheses	Valid Parentheses	Given a string s containing just the characters '(', ')', '{', '}', '[' and ']', determine if the input string is valid.\n\nAn input string is valid if:\n1. Open brackets must be closed by the same type of brackets.\n2. Open brackets must be closed in the correct order.\n3. Every close bracket has a corresponding open bracket of the same type.	1 <= s.length <= 10^4\ns consists of parentheses only '()[]{}'.	easy	O(n)	O(n)	{"Use a stack of characters.","When you encounter an opening bracket, push it to the top of the stack.","When you encounter a closing bracket, check if the top of the stack was the opening for it. If yes, pop it from the stack. Otherwise, return false."}	10	2025-07-05 16:29:06.712774
+merge-two-sorted-lists	Merge Two Sorted Lists	You are given the heads of two sorted linked lists list1 and list2.\n\nMerge the two lists in a one sorted list. The list should be made by splicing together the nodes of the first two lists.\n\nReturn the head of the merged linked list.	The number of nodes in both lists is in the range [0, 50].\n-100 <= Node.val <= 100\nBoth list1 and list2 are sorted in non-decreasing order.	easy	O(n + m)	O(1)	{"Maintain a head pointer to the merged list.","Compare values of the current nodes of both lists and attach the smaller one to the result.","Don't forget to handle the remaining nodes when one list is exhausted."}	10	2025-07-05 16:29:06.712774
+maximum-subarray	Maximum Subarray	Given an integer array nums, find the contiguous subarray (containing at least one number) which has the largest sum and return its sum.\n\nA subarray is a contiguous part of an array.	1 <= nums.length <= 10^5\n-10^4 <= nums[i] <= 10^4	medium	O(n)	O(1)	{"Try using Kadane's algorithm.","At each position, you can either start a new subarray or extend the existing one.","Keep track of the maximum sum seen so far."}	25	2025-07-05 16:29:06.712774
+binary-tree-level-order-traversal	Binary Tree Level Order Traversal	Given the root of a binary tree, return the level order traversal of its nodes' values. (i.e., from left to right, level by level).	The number of nodes in the tree is in the range [0, 2000].\n-1000 <= Node.val <= 1000	medium	O(n)	O(w)	{"Use BFS (Breadth-First Search) with a queue.","Process nodes level by level by keeping track of the current level size.","Add all nodes of the current level to the result before moving to the next level."}	25	2025-07-05 16:29:06.712774
+longest-increasing-subsequence	Longest Increasing Subsequence	Given an integer array nums, return the length of the longest strictly increasing subsequence.\n\nA subsequence is a sequence that can be derived from an array by deleting some or no elements without changing the order of the remaining elements.	1 <= nums.length <= 2500\n-10^4 <= nums[i] <= 10^4	medium	O(n^2)	O(n)	{"Think about the brute force approach first. Can you optimize it using dynamic programming?","For each element, what's the longest increasing subsequence ending at that element?","Can you use binary search to optimize further?"}	25	2025-07-05 16:29:06.712774
+regular-expression-matching	Regular Expression Matching	Given an input string s and a pattern p, implement regular expression matching with support for '.' and '*' where:\n\n'.' Matches any single character.\n'*' Matches zero or more of the preceding element.\n\nThe matching should cover the entire input string (not partial).	1 <= s.length <= 20\n1 <= p.length <= 30\ns contains only lowercase English letters.\np contains only lowercase English letters, '.', and '*'.\nIt is guaranteed for each appearance of the character '*', there will be a previous valid character to match.	hard	O(n*m)	O(n*m)	{"This problem has a typical solution using dynamic programming. We define the state P(i,j) to be true if s[0..i) matches p[0..j) and false otherwise.","The state transitions have two cases: the general case and the special case with the '*' character.","For the general case, we just check if the current characters match, and if they do, we move to the next state P(i+1, j+1)."}	50	2025-07-05 16:29:06.712774
+median-of-two-sorted-arrays	Median of Two Sorted Arrays	Given two sorted arrays nums1 and nums2 of size m and n respectively, return the median of the two sorted arrays.\n\nThe overall run time complexity should be O(log (m+n)).	nums1.length == m\nnums2.length == n\n0 <= m <= 1000\n0 <= n <= 1000\n1 <= m + n <= 2000\n-10^6 <= nums1[i], nums2[i] <= 10^6	hard	O(log(min(m,n)))	O(1)	{"To solve this problem, we need to understand \\"What is the use of median\\". In statistics, the median is used for dividing a set into two equal length subsets, that one subset is always greater than the other.","If we understand the use of median for dividing, we are very close to the answer.","First let's cut A into two parts at a random position i: left_A[0, i-1] | right_A[i, m-1]. Since A has m elements, so there are m+1 kinds of cutting (i = 0 ~ m)."}	50	2025-07-05 16:29:06.712774
+climbing-stairs	Climbing Stairs	You are climbing a staircase. It takes n steps to reach the top.\n\nEach time you can either climb 1 or 2 steps. In how many distinct ways can you climb to the top?	1 <= n <= 45	easy	O(n)	O(1)	{"To reach nth step, what could have been your previous steps? (Think about the step sizes)","You are climbing either from (n-1)th step or (n-2)th step.","So the number of ways to get to the nth step is equal to the sum of ways of getting to the (n-1)th step and ways of getting to the (n-2)th step."}	10	2025-07-05 16:29:06.712774
+best-time-to-buy-and-sell-stock	Best Time to Buy and Sell Stock	You are given an array prices where prices[i] is the price of a given stock on the ith day.\n\nYou want to maximize your profit by choosing a single day to buy one stock and choosing a different day in the future to sell that stock.\n\nReturn the maximum profit you can achieve from this transaction. If you cannot achieve any profit, return 0.	1 <= prices.length <= 10^5\n0 <= prices[i] <= 10^4	easy	O(n)	O(1)	{"Say the given array is [7, 1, 5, 3, 6, 4]. If we plot the numbers of the given array on a graph, we get: The points of interest are the peaks and valleys in the given graph. We need to find the largest peak following the smallest valley.","We can maintain two variables - minprice and maxprofit corresponding to the smallest valley and maximum profit (maximum difference between selling price and minprice) obtained so far respectively."}	10	2025-07-05 16:29:06.712774
+\.
+
+
+--
 -- Data for Name: mcqs; Type: TABLE DATA; Schema: public; Owner: -
 --
 
@@ -527,8 +717,20 @@ M9.3	9	Which type of queue allows elements to be inserted and removed from both 
 
 
 --
--- TOC entry 3566 (class 0 OID 16781)
--- Dependencies: 223
+-- Data for Name: problem_topics; Type: TABLE DATA; Schema: public; Owner: -
+--
+
+COPY public.problem_topics (id, name) FROM stdin;
+1	Arrays
+2	Stack
+3	Linked List
+4	Dynamic Programming
+5	Tree
+6	Binary Search
+\.
+
+
+--
 -- Data for Name: questions; Type: TABLE DATA; Schema: public; Owner: -
 --
 
@@ -564,72 +766,36 @@ C9.3	9	Level Order Traversal of Binary Tree	Implement a function that performs a
 
 
 --
--- TOC entry 3576 (class 0 OID 25079)
--- Dependencies: 233
 -- Data for Name: submissions; Type: TABLE DATA; Schema: public; Owner: -
 --
 
 COPY public.submissions (submission_id, user_id, language, code, stdin, status, result, execution_time, memory_usage, created_at, updated_at, stdout, stderr) FROM stdin;
-1	4	cpp	#include<iostream>\nusing namespace std;\nint main() { int a, b; cin >> a >> b; cout << a + b; return 0; }	3 4	queued	\N	\N	\N	2025-07-04 09:08:57.797502	2025-07-04 09:08:57.797502	\N	\N
-2	4	cpp	#include<iostream>\nusing namespace std;\nint main() { int a, b; cin >> a >> b; cout << a + b; return 0; }	3 4	queued	\N	\N	\N	2025-07-04 09:09:01.027976	2025-07-04 09:09:01.027976	\N	\N
-3	4	python	print("Hello World")	\N	success	\N	76	\N	2025-07-04 09:40:19.383816	2025-07-04 09:40:19.482453	Hello World\n	
-4	4	javascript	console.log("Hello World");	\N	success	\N	78	\N	2025-07-04 09:43:31.740926	2025-07-04 09:43:31.837589	Hello World\n	
-5	4	cpp	#include <iostream>\nint main() {\n    std::cout << "Hello World" << std::endl;\n    return 0;\n}	\N	success	\N	573	\N	2025-07-04 09:43:47.600708	2025-07-04 09:43:48.186987	Hello World\n	
-6	4	java	public class HelloWorld {\n    public static void main(String[] args) {\n        System.out.println("Hello Nigga");\n    }\n}	\N	success	\N	1224	\N	2025-07-04 09:44:17.490339	2025-07-04 09:44:18.749138		Error: Could not find or load main class code_6\nCaused by: java.lang.ClassNotFoundException: code_6\n
-7	4	cpp	#include <iostream>\nint main() {\n    std::cout << "Ni hao fyne shyt" << std::endl;\n    return 0;\n}	\N	success	\N	532	\N	2025-07-04 09:45:03.542862	2025-07-04 09:45:04.085396		/bin/sh: 1: ./output_5: not found\n
-8	4	cpp	#include <iostream>\nint main() {\n    std::cout << "Ni hao fyne shyt" << std::endl;\n    return 0;\n}	\N	success	\N	583	\N	2025-07-04 09:45:28.919751	2025-07-04 09:45:29.515172		/bin/sh: 1: ./output_5: not found\n
-9	4	cpp	#include <iostream>\nint main() {\n    std::cout << "hello world" << std::endl;\n    return 0;\n}	\N	success	\N	486	\N	2025-07-04 09:46:08.816597	2025-07-04 09:46:09.311655		/bin/sh: 1: ./output_5: not found\n
-10	4	cpp	#include <iostream>\nint main() {\n    std::cout << "hello world" << std::endl;\n    return 0;\n}	\N	success	\N	608	\N	2025-07-04 09:49:41.779221	2025-07-04 09:49:42.408072		/bin/sh: 1: output_10: not found\n
-11	4	cpp	#include <iostream>\nint main() {\n    std::cout << "hello world" << std::endl;\n    return 0;\n}	\N	success	\N	760	\N	2025-07-04 09:55:18.18305	2025-07-04 09:55:18.989931	hello world\n	
-12	4	cpp	#include <iostream>\nint main() {\n    std::cout << "ni hao shyts" << std::endl;\n    return 0;\n}	\N	success	\N	623	\N	2025-07-04 09:55:34.147906	2025-07-04 09:55:34.779353	ni hao shyts\n	
-13	4	javascript	// Check Maximum of Three Numbers\n// Write a program using conditional statements to find and print the maximum of three given numbers.\n\nfunction solve() {\n  // Your code goes here\n  console.log("Hello from frontend");\n}	\N	success	\N	11	\N	2025-07-04 11:16:10.334632	2025-07-04 11:16:10.4232		/bin/sh: 1: node: not found\n
-14	4	js	console.log("Hello Shit")	\N	error	\N	\N	\N	2025-07-04 11:20:04.027261	2025-07-04 11:20:04.054094	\N	Unsupported language: js
-15	4	javascript	console.log("Hello Shit")	\N	success	\N	25	\N	2025-07-04 11:20:18.854003	2025-07-04 11:20:18.90397		/bin/sh: 1: node: not found\n
-16	4	javascript	console.log("Hello Shit")	\N	success	\N	8	\N	2025-07-04 11:21:39.139478	2025-07-04 11:21:39.15722		/bin/sh: 1: node: not found\n
-17	4	javascript	// Simple Calculator\n// Create a simple calculator using switch statements that can perform basic operations (+, -, *, /) on two numbers based on user input.\n\nfunction solve() {\n  // Your code goes here\n  console.log("Hello World");\n}	\N	success	\N	89	\N	2025-07-04 11:27:31.82071	2025-07-04 11:27:31.995847		
-18	4	javascript	console.log("Hello Shit")	\N	success	\N	76	\N	2025-07-04 11:27:55.554797	2025-07-04 11:27:55.637563	Hello Shit\n	
-19	4	javascript	// String Manipulation Functions\n// Write multiple functions: one to reverse a string, one to count vowels in a string, and one to check if a string is a palindrome. Demonstrate calling all three functions with sample strings.\n\nfunction solve() {\n  // Your code goes here\n  console.log("String is manipulated");\n}	\N	success	\N	83	\N	2025-07-04 11:28:59.43682	2025-07-04 11:28:59.530259		
-20	4	javascript	// String Manipulation Functions\n// Write multiple functions: one to reverse a string, one to count vowels in a string, and one to check if a string is a palindrome. Demonstrate calling all three functions with sample strings.\n\nfunction solve() {\n  // Your code goes here\n  console.log("String is manipulated");\n}	\N	success	\N	87	\N	2025-07-04 11:29:54.087578	2025-07-04 11:29:54.184148		
-21	4	javascript	// String Manipulation Functions\n// Write multiple functions: one to reverse a string, one to count vowels in a string, and one to check if a string is a palindrome. Demonstrate calling all three functions with sample strings.\n\nfunction solve() {\n  // Your code goes here\n  console.log("String is manipulated");\n}\n\nsolve();	\N	success	\N	84	\N	2025-07-04 11:30:20.149303	2025-07-04 11:30:20.279385	String is manipulated\n	
-22	4	cpp	// String Manipulation Functions\n// Write multiple functions: one to reverse a string, one to count vowels in a string, and one to check if a string is a palindrome. Demonstrate calling all three functions with sample strings.\n\n#include <iostream>\nusing namespace std;\n\nint main() {\n    // Your code goes here\n    cout << "Hello World" << endl;\n    return 0;\n}	\N	success	\N	920	\N	2025-07-04 11:30:30.689507	2025-07-04 11:30:31.619333		/bin/sh: 1: .//tmp/code_22/output_22: not found\n
-23	4	cpp	// String Manipulation Functions\n// Write multiple functions: one to reverse a string, one to count vowels in a string, and one to check if a string is a palindrome. Demonstrate calling all three functions with sample strings.\n\n#include <iostream>\nusing namespace std;\n\nint main() {\n    // Your code goes here\n    cout << "Hello World" << endl;\n    return 0;\n}	\N	success	\N	817	\N	2025-07-04 11:32:23.771598	2025-07-04 11:32:24.648457		/bin/sh: 1: .//tmp/code_23/output_23: not found\n
-24	4	cpp	// String Manipulation Functions\n// Write multiple functions: one to reverse a string, one to count vowels in a string, and one to check if a string is a palindrome. Demonstrate calling all three functions with sample strings.\n\n#include <iostream>\nusing namespace std;\n\nint main() {\n    // Your code goes here\n    cout << "Hello World" << endl;\n    return 0;\n}	\N	success	\N	718	\N	2025-07-04 11:32:44.422239	2025-07-04 11:32:45.148401		/bin/sh: 1: .//tmp/code_24/output_24: not found\n
-25	4	cpp	// String Manipulation Functions\n// Write multiple functions: one to reverse a string, one to count vowels in a string, and one to check if a string is a palindrome. Demonstrate calling all three functions with sample strings.\n\n#include <iostream>\nusing namespace std;\n\nint main() {\n    // Your code goes here\n    cout << "Hello World" << endl;\n    return 0;\n}	\N	success	\N	547	\N	2025-07-04 11:43:10.722469	2025-07-04 11:43:11.29782	Hello World\n	
-26	4	cpp	// String Manipulation Functions\n// Write multiple functions: one to reverse a string, one to count vowels in a string, and one to check if a string is a palindrome. Demonstrate calling all three functions with sample strings.\n\n#include <iostream>\nusing namespace std;\n\nint main() {\n    // Your code goes here\n    cout << "Hellofadsdasfklashfjkldahfjksdhjklfhsdakljfhsdjklahfskldahfkl World" << endl;\n    return 0;\n}	\N	success	\N	567	\N	2025-07-04 11:44:23.699075	2025-07-04 11:44:24.276493	Hellofadsdasfklashfjkldahfjksdhjklfhsdakljfhsdjklahfskldahfkl World\n	
-27	4	cpp	// Multiplication Table\n// Write nested loops to print the multiplication table for numbers 1 to 5 in a formatted way (e.g., 1x1=1, 1x2=2, etc.).\n\n#include <iostream>\nusing namespace std;\n\nint main() {\n    int n = 5;\n    for (int i = 1; i <= 10; i++) {\n      std::cout << i * n << "\\n";\n    }\n    return 0;\n}	\N	success	\N	940	\N	2025-07-04 11:46:53.378764	2025-07-04 11:46:54.332598	5\n10\n15\n20\n25\n30\n35\n40\n45\n50\n	
-31	4	cpp	// Find Two Sum\n// Given an array of integers and a target sum, find two numbers in the array that add up to the target. Return their indices. You may assume that each input has exactly one solution.\n\n#include <iostream>\nusing namespace std;\n\nint main() {\n    cout << "Hello World" << endl;\n    return 0;\n}	\N	success	\N	1157	\N	2025-07-04 14:43:53.964828	2025-07-04 14:43:55.141028	Hello World\n	
-28	4	javascript	// Rotate Array\n// Given an array and a number k, rotate the array to the right by k steps. For example, given [1,2,3,4,5,6,7] and k=3, return [5,6,7,1,2,3,4]. Implement both left and right rotation functions.\n\nfunction solve() {\n  // Your code goes here\n  console.log("Hello World");\n}	\N	success	\N	83	\N	2025-07-04 12:56:12.432517	2025-07-04 12:56:12.555294		
-29	4	javascript	// Implement a Basic Singly Linked List\n// Create a singly linked list implementation with the following methods: insert at beginning, insert at end, delete a node with a given value, and print all elements. Your implementation should include a Node class and a LinkedList class.\n\nfunction solve() {\n  console.log("HELLO WORLD THIS IS PRANAV SINHA")\n}	\N	success	\N	87	\N	2025-07-04 14:04:01.461584	2025-07-04 14:04:01.59085		
-30	4	javascript	// Implement a Basic Singly Linked List\n// Create a singly linked list implementation with the following methods: insert at beginning, insert at end, delete a node with a given value, and print all elements. Your implementation should include a Node class and a LinkedList class.\n\nfunction solve() {\n  console.log("HELLO WORLD THIS IS PRANAV SINHA")\n}\n\n// i forgot to call the function\n\nsolve();	\N	success	\N	91	\N	2025-07-04 14:04:21.58842	2025-07-04 14:04:21.693635	HELLO WORLD THIS IS PRANAV SINHA\n	
+32	9	python	# Find Two Sum\n# Given an array of integers and a target sum, find two numbers in the array that add up to the target. Return their indices. You may assume that each input has exactly one solution.\n\ndef solve():\n    # Your code goes here\n    print("Hello World")\n\nsolve()	\N	success	\N	42	\N	2025-07-05 13:54:40.056831	2025-07-05 13:54:40.345843	Hello World\n	
+33	9	javascript	// Find Two Sum\n// Given an array of integers and a target sum, find two numbers in the array that add up to the target. Return their indices. You may assume that each input has exactly one solution.\n\nfunction solve() {\n  // Your code goes here\n  console.log("Hello World");\n}\n\nsolve();	\N	success	\N	60	\N	2025-07-05 13:54:56.12465	2025-07-05 13:54:56.197752	Hello World\n	
+34	9	javascript	// Find Two Sum\n// Given an array of integers and a target sum, find two numbers in the array that add up to the target. Return their indices. You may assume that each input has exactly one solution.\n\nfunction solve() {\n  // Your code goes here\n  console.log("Hello Jija ji");\n}\n\nsolve();	\N	success	\N	47	\N	2025-07-05 13:56:51.107071	2025-07-05 13:56:51.169037	Hello Jija ji\n	
 \.
 
 
 --
--- TOC entry 3562 (class 0 OID 16738)
--- Dependencies: 219
 -- Data for Name: team_members; Type: TABLE DATA; Schema: public; Owner: -
 --
 
 COPY public.team_members (user_id, team_id, is_admin) FROM stdin;
-6	1	t
-7	1	f
+8	2	t
+9	2	f
 \.
 
 
 --
--- TOC entry 3561 (class 0 OID 16722)
--- Dependencies: 218
 -- Data for Name: teams; Type: TABLE DATA; Schema: public; Owner: -
 --
 
 COPY public.teams (id, name, join_code, created_by, created_at) FROM stdin;
-1	Lana Club	7JOBPQJG	6	2025-07-04 15:48:15.153921
+2	Club Penguin	TWH16II1	8	2025-07-04 20:38:12.661181
 \.
 
 
 --
--- TOC entry 3565 (class 0 OID 16767)
--- Dependencies: 222
 -- Data for Name: topic_code_examples; Type: TABLE DATA; Schema: public; Owner: -
 --
 
@@ -674,8 +840,6 @@ COPY public.topic_code_examples (id, topic_id, language, code) FROM stdin;
 
 
 --
--- TOC entry 3563 (class 0 OID 16754)
--- Dependencies: 220
 -- Data for Name: topics; Type: TABLE DATA; Schema: public; Owner: -
 --
 
@@ -693,8 +857,6 @@ COPY public.topics (id, title, slug, section, difficulty, markdown, diagrams, xp
 
 
 --
--- TOC entry 3571 (class 0 OID 16827)
--- Dependencies: 228
 -- Data for Name: user_question_progress; Type: TABLE DATA; Schema: public; Owner: -
 --
 
@@ -717,107 +879,82 @@ COPY public.user_question_progress (id, user_id, question_id, is_passed, duratio
 17	\N	C1.1	t	0	completed	2025-07-03 12:51:59.685352
 18	\N	C1.2	t	0	completed	2025-07-03 12:52:03.15009
 19	\N	C1.3	t	0	completed	2025-07-03 12:52:04.921982
-20	4	C1.1	t	0	completed	2025-07-03 12:55:38.298042
-21	4	C1.2	t	0	completed	2025-07-03 12:56:28.372876
-22	4	C1.3	t	0	completed	2025-07-03 12:56:29.690964
-24	4	C2.2	t	0	completed	2025-07-03 13:03:53.069227
-25	4	C3.1	t	0	completed	2025-07-03 13:06:51.046901
-27	4	C3.3	t	0	completed	2025-07-03 13:07:21.632925
-28	4	C4.1	t	0	completed	2025-07-03 13:26:46.89198
-29	4	C4.2	t	0	completed	2025-07-03 13:26:48.773175
-30	4	C4.3	t	0	completed	2025-07-03 13:26:57.375824
-23	4	C2.1	t	0	completed	2025-07-03 13:54:27.810741
-26	4	C3.2	t	0	completed	2025-07-03 14:13:21.888405
-33	4	C7.1	t	104	completed	2025-07-04 14:04:26.896504
-34	4	C5.1	t	0	completed	2025-07-04 14:59:33.894496
+35	9	C1.1	t	5	completed	2025-07-05 13:58:34.634334
+36	9	C1.2	t	0	completed	2025-07-05 13:58:45.241779
+37	9	C1.3	t	0	completed	2025-07-05 13:58:48.843394
 \.
 
 
 --
--- TOC entry 3569 (class 0 OID 16808)
--- Dependencies: 226
 -- Data for Name: user_topic_progress; Type: TABLE DATA; Schema: public; Owner: -
 --
 
 COPY public.user_topic_progress (id, user_id, topic_id, status, completed_at) FROM stdin;
-6	4	1	completed	2025-07-03 12:56:38.114675
-8	4	3	completed	2025-07-03 13:10:54.015456
-10	4	4	completed	2025-07-03 13:27:19.90314
-11	4	2	completed	2025-07-03 13:54:17.66673
+12	9	1	completed	2025-07-05 13:59:09.93095
 \.
 
 
 --
--- TOC entry 3572 (class 0 OID 16847)
--- Dependencies: 229
 -- Data for Name: user_total_xp; Type: TABLE DATA; Schema: public; Owner: -
 --
 
 COPY public.user_total_xp (user_id, email, total_xp) FROM stdin;
-4	pranavsinha499@gmail.com	425
-6	lana.del.rey@mommy.com	0
-7	tame@gmail.com	0
+8	pranavsinha499@gmail.com	0
+9	pranavsinha922@gmail.com	100
 \.
 
 
 --
--- TOC entry 3574 (class 0 OID 16863)
--- Dependencies: 231
 -- Data for Name: user_xp_log; Type: TABLE DATA; Schema: public; Owner: -
 --
 
 COPY public.user_xp_log (id, user_id, source_type, source_key, xp_earned, created_at) FROM stdin;
-1	4	question	C3.1	15	2025-07-03 13:06:51.050313
-2	4	question	C3.2	25	2025-07-03 13:07:19.104327
-3	4	question	C3.3	30	2025-07-03 13:07:21.63568
-4	4	question	3	70	2025-07-03 13:10:43.37198
-6	4	question	C4.1	20	2025-07-03 13:26:46.895134
-7	4	question	C4.2	30	2025-07-03 13:26:48.775903
-8	4	question	C4.3	40	2025-07-03 13:26:57.378414
-9	4	question	4	80	2025-07-03 13:27:19.923722
-10	4	question	2	60	2025-07-03 13:54:17.693004
-11	4	question	C2.1	15	2025-07-03 13:54:27.815558
-13	4	question	C7.1	20	2025-07-04 14:04:26.907231
-14	4	question	C5.1	20	2025-07-04 14:59:33.898779
+15	9	question	C1.1	10	2025-07-05 13:58:34.641476
+16	9	question	C1.2	15	2025-07-05 13:58:45.249187
+17	9	question	C1.3	25	2025-07-05 13:58:48.849881
+18	9	question	1	50	2025-07-05 13:59:09.939423
 \.
 
 
 --
--- TOC entry 3559 (class 0 OID 16709)
--- Dependencies: 216
 -- Data for Name: users; Type: TABLE DATA; Schema: public; Owner: -
 --
 
 COPY public.users (id, username, email, password, firebase_uid, profile_picture) FROM stdin;
-2	Randome	random@fga.com	$2b$10$6s5MGj7s7U7xhsJ9vAnUc.8C.APF8uOo75w/AGK.FBgHxXGRUMg9G	\N	\N
-3	thechillguy69	pranavsinha922@gmail.com	$2b$10$i9ZSCwk0w8FGn/nIDi6ih.4fNDd4vCKJAOvkZAfI6S0UZ.PsUPAX2	\N	\N
-4	Penguin5681	pranavsinha499@gmail.com	$2b$10$8LBVwPv8pU5ggusQ.o1zHOPGpjos91OYRjqaAJEF5g3zZp.hjQBfS	\N	\N
-6	lana	lana.del.rey@mommy.com	$2b$10$CMH/hdm9N1pu4Dl2zobbZOKb0MF0Co1TcWHs5N6urLbMlNFU9pUFq	\N	\N
-7	TameImpala	tame@gmail.com	$2b$10$dg10mBJLWMWrWVGWrMVNTOfD7UeuzhXhYBYc.gzuFC6hBsVGwZcVK	\N	\N
+8	Penguin5681	pranavsinha499@gmail.com	$2b$10$q1QCJh3sjxpQddE.ckT0MeybY2bLRf.d4ave0qADY91OOPuWO8rRq	\N	\N
+9	thechillguy69	pranavsinha922@gmail.com	$2b$10$gYB.EMpY8vWAXAFZJE3Zsuc5FPU8nEGUPrlKGsZ6zwfg46NynAuo2	\N	\N
 \.
 
 
 --
--- TOC entry 3590 (class 0 OID 0)
--- Dependencies: 232
+-- Name: coding_problem_testcases_id_seq; Type: SEQUENCE SET; Schema: public; Owner: -
+--
+
+SELECT pg_catalog.setval('public.coding_problem_testcases_id_seq', 27, true);
+
+
+--
+-- Name: problem_topics_id_seq; Type: SEQUENCE SET; Schema: public; Owner: -
+--
+
+SELECT pg_catalog.setval('public.problem_topics_id_seq', 6, true);
+
+
+--
 -- Name: submissions_submission_id_seq; Type: SEQUENCE SET; Schema: public; Owner: -
 --
 
-SELECT pg_catalog.setval('public.submissions_submission_id_seq', 31, true);
+SELECT pg_catalog.setval('public.submissions_submission_id_seq', 34, true);
 
 
 --
--- TOC entry 3591 (class 0 OID 0)
--- Dependencies: 217
 -- Name: teams_id_seq; Type: SEQUENCE SET; Schema: public; Owner: -
 --
 
-SELECT pg_catalog.setval('public.teams_id_seq', 1, true);
+SELECT pg_catalog.setval('public.teams_id_seq', 2, true);
 
 
 --
--- TOC entry 3592 (class 0 OID 0)
--- Dependencies: 221
 -- Name: topic_code_examples_id_seq; Type: SEQUENCE SET; Schema: public; Owner: -
 --
 
@@ -825,43 +962,58 @@ SELECT pg_catalog.setval('public.topic_code_examples_id_seq', 40, true);
 
 
 --
--- TOC entry 3593 (class 0 OID 0)
--- Dependencies: 227
 -- Name: user_question_progress_id_seq; Type: SEQUENCE SET; Schema: public; Owner: -
 --
 
-SELECT pg_catalog.setval('public.user_question_progress_id_seq', 34, true);
+SELECT pg_catalog.setval('public.user_question_progress_id_seq', 37, true);
 
 
 --
--- TOC entry 3594 (class 0 OID 0)
--- Dependencies: 225
 -- Name: user_topic_progress_id_seq; Type: SEQUENCE SET; Schema: public; Owner: -
 --
 
-SELECT pg_catalog.setval('public.user_topic_progress_id_seq', 11, true);
+SELECT pg_catalog.setval('public.user_topic_progress_id_seq', 12, true);
 
 
 --
--- TOC entry 3595 (class 0 OID 0)
--- Dependencies: 230
 -- Name: user_xp_log_id_seq; Type: SEQUENCE SET; Schema: public; Owner: -
 --
 
-SELECT pg_catalog.setval('public.user_xp_log_id_seq', 14, true);
+SELECT pg_catalog.setval('public.user_xp_log_id_seq', 18, true);
 
 
 --
--- TOC entry 3596 (class 0 OID 0)
--- Dependencies: 215
 -- Name: users_id_seq; Type: SEQUENCE SET; Schema: public; Owner: -
 --
 
-SELECT pg_catalog.setval('public.users_id_seq', 7, true);
+SELECT pg_catalog.setval('public.users_id_seq', 9, true);
 
 
 --
--- TOC entry 3380 (class 2606 OID 16801)
+-- Name: coding_problem_testcases coding_problem_testcases_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.coding_problem_testcases
+    ADD CONSTRAINT coding_problem_testcases_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: coding_problem_topics coding_problem_topics_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.coding_problem_topics
+    ADD CONSTRAINT coding_problem_topics_pkey PRIMARY KEY (problem_id, topic_id);
+
+
+--
+-- Name: coding_problems coding_problems_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.coding_problems
+    ADD CONSTRAINT coding_problems_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: mcqs mcqs_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -870,7 +1022,22 @@ ALTER TABLE ONLY public.mcqs
 
 
 --
--- TOC entry 3378 (class 2606 OID 16789)
+-- Name: problem_topics problem_topics_name_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.problem_topics
+    ADD CONSTRAINT problem_topics_name_key UNIQUE (name);
+
+
+--
+-- Name: problem_topics problem_topics_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.problem_topics
+    ADD CONSTRAINT problem_topics_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: questions questions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -879,7 +1046,6 @@ ALTER TABLE ONLY public.questions
 
 
 --
--- TOC entry 3400 (class 2606 OID 25089)
 -- Name: submissions submissions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -888,7 +1054,6 @@ ALTER TABLE ONLY public.submissions
 
 
 --
--- TOC entry 3370 (class 2606 OID 16743)
 -- Name: team_members team_members_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -897,7 +1062,6 @@ ALTER TABLE ONLY public.team_members
 
 
 --
--- TOC entry 3366 (class 2606 OID 16732)
 -- Name: teams teams_join_code_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -906,7 +1070,6 @@ ALTER TABLE ONLY public.teams
 
 
 --
--- TOC entry 3368 (class 2606 OID 16730)
 -- Name: teams teams_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -915,7 +1078,6 @@ ALTER TABLE ONLY public.teams
 
 
 --
--- TOC entry 3376 (class 2606 OID 16775)
 -- Name: topic_code_examples topic_code_examples_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -924,7 +1086,6 @@ ALTER TABLE ONLY public.topic_code_examples
 
 
 --
--- TOC entry 3372 (class 2606 OID 16763)
 -- Name: topics topics_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -933,7 +1094,6 @@ ALTER TABLE ONLY public.topics
 
 
 --
--- TOC entry 3374 (class 2606 OID 16765)
 -- Name: topics topics_slug_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -942,7 +1102,6 @@ ALTER TABLE ONLY public.topics
 
 
 --
--- TOC entry 3394 (class 2606 OID 16896)
 -- Name: user_xp_log unique_user_xp_log_entry; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -951,7 +1110,6 @@ ALTER TABLE ONLY public.user_xp_log
 
 
 --
--- TOC entry 3386 (class 2606 OID 16836)
 -- Name: user_question_progress user_question_progress_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -960,7 +1118,6 @@ ALTER TABLE ONLY public.user_question_progress
 
 
 --
--- TOC entry 3388 (class 2606 OID 16885)
 -- Name: user_question_progress user_question_progress_user_question_unique; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -969,7 +1126,6 @@ ALTER TABLE ONLY public.user_question_progress
 
 
 --
--- TOC entry 3382 (class 2606 OID 16815)
 -- Name: user_topic_progress user_topic_progress_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -978,7 +1134,6 @@ ALTER TABLE ONLY public.user_topic_progress
 
 
 --
--- TOC entry 3384 (class 2606 OID 16883)
 -- Name: user_topic_progress user_topic_progress_user_topic_unique; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -987,7 +1142,6 @@ ALTER TABLE ONLY public.user_topic_progress
 
 
 --
--- TOC entry 3390 (class 2606 OID 16856)
 -- Name: user_total_xp user_total_xp_email_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -996,7 +1150,6 @@ ALTER TABLE ONLY public.user_total_xp
 
 
 --
--- TOC entry 3392 (class 2606 OID 16854)
 -- Name: user_total_xp user_total_xp_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1005,7 +1158,6 @@ ALTER TABLE ONLY public.user_total_xp
 
 
 --
--- TOC entry 3396 (class 2606 OID 16871)
 -- Name: user_xp_log user_xp_log_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1014,7 +1166,6 @@ ALTER TABLE ONLY public.user_xp_log
 
 
 --
--- TOC entry 3360 (class 2606 OID 16720)
 -- Name: users users_email_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1023,7 +1174,6 @@ ALTER TABLE ONLY public.users
 
 
 --
--- TOC entry 3362 (class 2606 OID 16716)
 -- Name: users users_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1032,7 +1182,6 @@ ALTER TABLE ONLY public.users
 
 
 --
--- TOC entry 3364 (class 2606 OID 16718)
 -- Name: users users_username_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1041,7 +1190,20 @@ ALTER TABLE ONLY public.users
 
 
 --
--- TOC entry 3397 (class 1259 OID 25091)
+-- Name: idx_problem_difficulty; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_problem_difficulty ON public.coding_problems USING btree (difficulty);
+
+
+--
+-- Name: idx_problem_topic_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_problem_topic_id ON public.coding_problem_topics USING btree (topic_id);
+
+
+--
 -- Name: idx_submissions_status; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1049,7 +1211,6 @@ CREATE INDEX idx_submissions_status ON public.submissions USING btree (status);
 
 
 --
--- TOC entry 3398 (class 1259 OID 25090)
 -- Name: idx_submissions_user_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1057,7 +1218,13 @@ CREATE INDEX idx_submissions_user_id ON public.submissions USING btree (user_id)
 
 
 --
--- TOC entry 3413 (class 2620 OID 16890)
+-- Name: idx_testcase_problem; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_testcase_problem ON public.coding_problem_testcases USING btree (problem_id);
+
+
+--
 -- Name: users trg_insert_user_total_xp; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -1065,7 +1232,6 @@ CREATE TRIGGER trg_insert_user_total_xp AFTER INSERT ON public.users FOR EACH RO
 
 
 --
--- TOC entry 3414 (class 2620 OID 16892)
 -- Name: user_xp_log trg_update_total_xp_on_log; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -1073,7 +1239,30 @@ CREATE TRIGGER trg_update_total_xp_on_log AFTER INSERT ON public.user_xp_log FOR
 
 
 --
--- TOC entry 3406 (class 2606 OID 16802)
+-- Name: coding_problem_testcases coding_problem_testcases_problem_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.coding_problem_testcases
+    ADD CONSTRAINT coding_problem_testcases_problem_id_fkey FOREIGN KEY (problem_id) REFERENCES public.coding_problems(id) ON DELETE CASCADE;
+
+
+--
+-- Name: coding_problem_topics coding_problem_topics_problem_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.coding_problem_topics
+    ADD CONSTRAINT coding_problem_topics_problem_id_fkey FOREIGN KEY (problem_id) REFERENCES public.coding_problems(id) ON DELETE CASCADE;
+
+
+--
+-- Name: coding_problem_topics coding_problem_topics_topic_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.coding_problem_topics
+    ADD CONSTRAINT coding_problem_topics_topic_id_fkey FOREIGN KEY (topic_id) REFERENCES public.problem_topics(id) ON DELETE CASCADE;
+
+
+--
 -- Name: mcqs mcqs_topic_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1082,7 +1271,6 @@ ALTER TABLE ONLY public.mcqs
 
 
 --
--- TOC entry 3405 (class 2606 OID 16790)
 -- Name: questions questions_topic_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1091,7 +1279,6 @@ ALTER TABLE ONLY public.questions
 
 
 --
--- TOC entry 3402 (class 2606 OID 16749)
 -- Name: team_members team_members_team_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1100,7 +1287,6 @@ ALTER TABLE ONLY public.team_members
 
 
 --
--- TOC entry 3403 (class 2606 OID 16744)
 -- Name: team_members team_members_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1109,7 +1295,6 @@ ALTER TABLE ONLY public.team_members
 
 
 --
--- TOC entry 3401 (class 2606 OID 16733)
 -- Name: teams teams_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1118,7 +1303,6 @@ ALTER TABLE ONLY public.teams
 
 
 --
--- TOC entry 3404 (class 2606 OID 16776)
 -- Name: topic_code_examples topic_code_examples_topic_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1127,7 +1311,6 @@ ALTER TABLE ONLY public.topic_code_examples
 
 
 --
--- TOC entry 3409 (class 2606 OID 16842)
 -- Name: user_question_progress user_question_progress_question_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1136,7 +1319,6 @@ ALTER TABLE ONLY public.user_question_progress
 
 
 --
--- TOC entry 3410 (class 2606 OID 16837)
 -- Name: user_question_progress user_question_progress_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1145,7 +1327,6 @@ ALTER TABLE ONLY public.user_question_progress
 
 
 --
--- TOC entry 3407 (class 2606 OID 16821)
 -- Name: user_topic_progress user_topic_progress_topic_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1154,7 +1335,6 @@ ALTER TABLE ONLY public.user_topic_progress
 
 
 --
--- TOC entry 3408 (class 2606 OID 16816)
 -- Name: user_topic_progress user_topic_progress_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1163,7 +1343,6 @@ ALTER TABLE ONLY public.user_topic_progress
 
 
 --
--- TOC entry 3411 (class 2606 OID 16857)
 -- Name: user_total_xp user_total_xp_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1172,15 +1351,12 @@ ALTER TABLE ONLY public.user_total_xp
 
 
 --
--- TOC entry 3412 (class 2606 OID 16872)
 -- Name: user_xp_log user_xp_log_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.user_xp_log
     ADD CONSTRAINT user_xp_log_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id);
 
-
--- Completed on 2025-07-04 16:53:25 IST
 
 --
 -- PostgreSQL database dump complete

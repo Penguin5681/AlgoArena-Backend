@@ -20,7 +20,6 @@ interface ProblemData {
 }
 
 export class SeedProblemsController {
-    // Helper function to calculate XP based on difficulty
     private getXPForDifficulty(difficulty: string): number {
         switch (difficulty) {
             case 'easy': return 10;
@@ -30,11 +29,9 @@ export class SeedProblemsController {
         }
     }
 
-    // Helper function to get or create topic
     private async getOrCreateTopic(topicName: string): Promise<number> {
         const client = await pool.connect();
         try {
-            // Check if topic exists
             const topicResult = await client.query(
                 'SELECT id FROM problem_topics WHERE name = $1',
                 [topicName]
@@ -56,7 +53,6 @@ export class SeedProblemsController {
         }
     }
 
-    // Controller method to seed problems from JSON file
     public async seedProblems(req: Request, res: Response): Promise<void> {
         const client = await pool.connect();
         

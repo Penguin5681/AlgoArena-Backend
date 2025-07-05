@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "algo-arena-85b81",
+  "private_key_id": "10353b00437fc4f463385a8fd88a55fef935ad03",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQCRlGMosgUY01NK\nHwgRDlzjUlnU0z5uM9q2fdgF9UN1a4U6dnCCd+HNE763VIniOi5R0Z2Ov6ZIpE4e\nsS3hu3IHq3GwSyUkRFXz3P5gnzmjt7cBiiKz2mkaDpmmSufHSbcsCGJE5qourdaS\nBc0+67nEzZWyhUlHXlDsuE6J37/wgK4+TkIdXx97K5SYOuhwz5LlMwL/F79JHBKP\nwTQ7HUBVpBOyWaYOpVb/yBb5tt6V6p36MVy4RCrv4gcGHvFHFQcu4lc5Cqy0Ct7m\njJhDn920jTf54IVALi8Hk44+HF4ur2KHsbxYDfGNpzHvg/K/87X5fQmR8Jq1kWgH\na4yf0BObAgMBAAECggEAG1EeSDEbXrysuNBY2aZ5zJgTzikzYkdtp2e2xOtwVJSv\n47f8xaaMIsitNUZyNxaWwXiVWYdhwui91emGRADB1WmYxC1dk1AVVtSlkOjfznY3\nK11JxLjblu2dbERK+Ky+587M7cPgtDCffjgDeuaNrb2r9Nso1HEAu2KcLifjotOi\nGEonimE+xxyWBclyoj/MD5+XDVsegHh6i9GcdtmH/jKvNRUObdNu0uyGNuHcxF8Z\nJ6WwJNKXbNksWiE62CqQSJvxsQroruhIQlZHIU+q3zd36CaMfpmZuCwecEHedj3n\nutfpNZu/ryB2BNrdnXqj3kfo+yAqZkOOoZ3BBk0XRQKBgQDKAb/YKXGXe5QtF0xs\nYCTmptrj0EuZlYzZ5kSxh/uq22QGzdzFrRQMAvWEBZ5jaAiL8xVAWiJ9biFIk989\nAOyEeZqwL/up1EXB9yiRuMOXyG/PT/jGgAAHsdPkXZ29S5ciW6YiCHaybnRa37u8\nhTn4PqG3KSYHAZGzH/G2z7AbTwKBgQC4faA0q5+mkk3Csjo4KmNIt8ychkdAww7s\noZ06tuuGWVryvZMr6JSkMUOr1QDkYnsLnGdmlLhJC0pU0DSr7bKCVG7wUp/qUvEr\nU+fvRv1ztlY8wfXjLYKs5zES1wwxCKQx9YhOrnSxu9hlhJG2gio9nKJ8QvvxzGsa\n37P8ODq/9QKBgQCUohbjWRMgb6hGSTdNIqzkHW8/YnrNxdD+X0S6D6EoRQbjTsOb\nm079y4uUmYHCCMEJIFHJqMhp3AeXXF5Mh4p/qu4bpyKYAf1Vy6LJHdakrrE+K8yT\nWYksIDcVd6BhsOXCPQcPUYTsowLv/mEnRCu0MXlRyHAXhZsL3nw+k7AzVwKBgBoG\ndrwXXc0kpF2LwNS9fgX7D50hABotqgRNhB2NQkpQfpjxjzpJc/Z5kJ9Dy/1ruwnX\nRWreHeUH97NhL5z1ShJCkOfL8A0hKC5Bht1lOUnCdgXaIrKqb92uO2j59xlPq8H0\nbgcTaxjLc+pWOivxzr2kQ/Odi2b/vDgtSHmTAQ6lAoGAUUGlAmh1/G+LkYEeSkgC\nCC6ONVZe0xxUbDEj+ZeB+DkR5iIufP7KxgSzTztyRngJlAPB3hS/4geXUqRmXuIY\nG/rfmlVQCQTsigIM0TIm7yfnk2FBSXx0gUJZRzzXQp1FnV46TLPsmuRZ9/FxreRo\nxIKk/P7PiVgV+yZQMbEGOo0=\n-----END PRIVATE KEY-----\n",
+  "client_email": "algoarena-service-account@algo-arena-85b81.iam.gserviceaccount.com",
+  "client_id": "111688672665550816195",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/algoarena-service-account%40algo-arena-85b81.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}
