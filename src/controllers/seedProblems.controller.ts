@@ -182,7 +182,6 @@ export class SeedProblemsController {
         }
     }
 
-    // Controller method to check seeded problems
     public async getProblemStatus(req: Request, res: Response): Promise<void> {
         try {
             const result = await pool.query(`
@@ -207,6 +206,273 @@ export class SeedProblemsController {
         } catch (error) {
             console.error('Error fetching seeded problems:', error);
             res.status(500).json({ error: 'Failed to fetch problems status' });
+        }
+    }
+
+    public async getAllProblems(req: Request, res: Response): Promise<void> {
+        try {
+            const { 
+                difficulty, 
+                topic, 
+                limit = 50, 
+                offset = 0, 
+                sortBy = 'created_at', 
+                sortOrder = 'DESC' 
+            } = req.query;
+
+            let query = `
+                SELECT 
+                    cp.id,
+                    cp.title,
+                    cp.description,
+                    cp.constraints,
+                    cp.difficulty,
+                    cp.time_complexity,
+                    cp.space_complexity,
+                    cp.hints,
+                    cp.xp,
+                    cp.created_at,
+                    pt.name as topic,
+                    pt.id as topic_id,
+                    COUNT(cpt.id) as test_case_count,
+                    COUNT(CASE WHEN cpt.is_sample = true THEN 1 END) as sample_test_case_count
+                FROM coding_problems cp
+                LEFT JOIN coding_problem_topics cpt_link ON cp.id = cpt_link.problem_id
+                LEFT JOIN problem_topics pt ON cpt_link.topic_id = pt.id
+                LEFT JOIN coding_problem_testcases cpt ON cp.id = cpt.problem_id
+            `;
+
+            const conditions = [];
+            const params = [];
+            let paramIndex = 1;
+
+            // Add filters
+            if (difficulty) {
+                conditions.push(`cp.difficulty = $${paramIndex++}`);
+                params.push(difficulty);
+            }
+
+            if (topic) {
+                conditions.push(`pt.name ILIKE $${paramIndex++}`);
+                params.push(`%${topic}%`);
+            }
+
+            if (conditions.length > 0) {
+                query += ' WHERE ' + conditions.join(' AND ');
+            }
+
+            query += `
+                GROUP BY cp.id, cp.title, cp.description, cp.constraints, cp.difficulty, 
+                         cp.time_complexity, cp.space_complexity, cp.hints, cp.xp, 
+                         cp.created_at, pt.name, pt.id
+                ORDER BY ${sortBy} ${sortOrder}
+                LIMIT $${paramIndex++} OFFSET $${paramIndex++}
+            `;
+
+            params.push(parseInt(limit as string), parseInt(offset as string));
+
+            const result = await pool.query(query, params);
+
+            // Get total count for pagination
+            let countQuery = `
+                SELECT COUNT(DISTINCT cp.id) as total
+                FROM coding_problems cp
+                LEFT JOIN coding_problem_topics cpt_link ON cp.id = cpt_link.problem_id
+                LEFT JOIN problem_topics pt ON cpt_link.topic_id = pt.id
+            `;
+
+            const countConditions = [];
+            const countParams = [];
+            let countParamIndex = 1;
+
+            if (difficulty) {
+                countConditions.push(`cp.difficulty = $${countParamIndex++}`);
+                countParams.push(difficulty);
+            }
+
+            if (topic) {
+                countConditions.push(`pt.name ILIKE $${countParamIndex++}`);
+                countParams.push(`%${topic}%`);
+            }
+
+            if (countConditions.length > 0) {
+                countQuery += ' WHERE ' + countConditions.join(' AND ');
+            }
+
+            const countResult = await pool.query(countQuery, countParams);
+            const totalCount = parseInt(countResult.rows[0].total);
+
+            res.json({
+                success: true,
+                data: {
+                    problems: result.rows,
+                    pagination: {
+                        total: totalCount,
+                        limit: parseInt(limit as string),
+                        offset: parseInt(offset as string),
+                        hasMore: parseInt(offset as string) + parseInt(limit as string) < totalCount
+                    }
+                }
+            });
+
+        } catch (error) {
+            console.error('Error fetching all problems:', error);
+            res.status(500).json({ 
+                error: 'Failed to fetch problems',
+                details: error instanceof Error ? error.message : 'Unknown error'
+            });
+        }
+    }
+
+    public async getProblemById(req: Request, res: Response): Promise<void> {
+        try {
+            const { id } = req.params;
+
+            if (!id) {
+                res.status(400).json({ error: 'Problem ID is required' });
+                return;
+            }
+
+            // Get problem details
+            const problemResult = await pool.query(`
+                SELECT 
+                    cp.id,
+                    cp.title,
+                    cp.description,
+                    cp.constraints,
+                    cp.difficulty,
+                    cp.time_complexity,
+                    cp.space_complexity,
+                    cp.hints,
+                    cp.xp,
+                    cp.created_at,
+                    pt.name as topic,
+                    pt.id as topic_id
+                FROM coding_problems cp
+                LEFT JOIN coding_problem_topics cpt_link ON cp.id = cpt_link.problem_id
+                LEFT JOIN problem_topics pt ON cpt_link.topic_id = pt.id
+                WHERE cp.id = $1
+            `, [id]);
+
+            if (problemResult.rows.length === 0) {
+                res.status(404).json({ error: 'Problem not found' });
+                return;
+            }
+
+            // Get test cases
+            const testCasesResult = await pool.query(`
+                SELECT 
+                    id,
+                    input,
+                    expected_output,
+                    is_sample
+                FROM coding_problem_testcases
+                WHERE problem_id = $1
+                ORDER BY is_sample DESC, id ASC
+            `, [id]);
+
+            const problem = problemResult.rows[0];
+            const testCases = testCasesResult.rows;
+
+            res.json({
+                success: true,
+                data: {
+                    ...problem,
+                    testCases: testCases,
+                    sampleTestCases: testCases.filter(tc => tc.is_sample),
+                    totalTestCases: testCases.length
+                }
+            });
+
+        } catch (error) {
+            console.error('Error fetching problem by ID:', error);
+            res.status(500).json({ 
+                error: 'Failed to fetch problem',
+                details: error instanceof Error ? error.message : 'Unknown error'
+            });
+        }
+    }
+
+    public async getProblemsByTopic(req: Request, res: Response): Promise<void> {
+        try {
+            const { topicId } = req.params;
+            const { limit = 20, offset = 0 } = req.query;
+
+            if (!topicId) {
+                res.status(400).json({ error: 'Topic ID is required' });
+                return;
+            }
+
+            const result = await pool.query(`
+                SELECT 
+                    cp.id,
+                    cp.title,
+                    cp.difficulty,
+                    cp.xp,
+                    cp.created_at,
+                    pt.name as topic,
+                    COUNT(cpt.id) as test_case_count
+                FROM coding_problems cp
+                INNER JOIN coding_problem_topics cpt_link ON cp.id = cpt_link.problem_id
+                INNER JOIN problem_topics pt ON cpt_link.topic_id = pt.id
+                LEFT JOIN coding_problem_testcases cpt ON cp.id = cpt.problem_id
+                WHERE pt.id = $1
+                GROUP BY cp.id, cp.title, cp.difficulty, cp.xp, cp.created_at, pt.name
+                ORDER BY cp.created_at DESC
+                LIMIT $2 OFFSET $3
+            `, [topicId, parseInt(limit as string), parseInt(offset as string)]);
+
+            res.json({
+                success: true,
+                data: {
+                    problems: result.rows,
+                    topicId: parseInt(topicId),
+                    pagination: {
+                        limit: parseInt(limit as string),
+                        offset: parseInt(offset as string)
+                    }
+                }
+            });
+
+        } catch (error) {
+            console.error('Error fetching problems by topic:', error);
+            res.status(500).json({ 
+                error: 'Failed to fetch problems by topic',
+                details: error instanceof Error ? error.message : 'Unknown error'
+            });
+        }
+    }
+
+    public async getTopics(req: Request, res: Response): Promise<void> {
+        try {
+            const result = await pool.query(`
+                SELECT 
+                    pt.id,
+                    pt.name,
+                    COUNT(cpt_link.problem_id) as problem_count,
+                    COUNT(CASE WHEN cp.difficulty = 'easy' THEN 1 END) as easy_count,
+                    COUNT(CASE WHEN cp.difficulty = 'medium' THEN 1 END) as medium_count,
+                    COUNT(CASE WHEN cp.difficulty = 'hard' THEN 1 END) as hard_count
+                FROM problem_topics pt
+                LEFT JOIN coding_problem_topics cpt_link ON pt.id = cpt_link.topic_id
+                LEFT JOIN coding_problems cp ON cpt_link.problem_id = cp.id
+                GROUP BY pt.id, pt.name
+                ORDER BY problem_count DESC, pt.name ASC
+            `);
+
+            res.json({
+                success: true,
+                data: {
+                    topics: result.rows
+                }
+            });
+
+        } catch (error) {
+            console.error('Error fetching topics:', error);
+            res.status(500).json({ 
+                error: 'Failed to fetch topics',
+                details: error instanceof Error ? error.message : 'Unknown error'
+            });
         }
     }
 }
