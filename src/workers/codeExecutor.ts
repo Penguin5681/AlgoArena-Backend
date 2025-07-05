@@ -30,27 +30,22 @@ interface LanguageConfig {
 const languageConfigs: Record<string, LanguageConfig> = {
   python: {
     extension: "py",
-    executeCommand: "python3 {file}",
+    executeCommand: "/usr/bin/python3 {file}",
   },
   javascript: {
     extension: "js",
-    executeCommand: "node {file}",
+    executeCommand: "/home/thechillguy69/.nvm/versions/node/v22.17.0/bin/node {file}",
   },
   java: {
     extension: "java",
-    compileCommand: "javac {file}",
-    executeCommand: "java -cp {dir} {className}",
+    compileCommand: "/usr/bin/javac {file}",
+    executeCommand: "/usr/bin/java {className}",
   },
   cpp: {
     extension: "cpp",
-    compileCommand: "g++ -o {output} {file}",
+    compileCommand: "/usr/bin/g++ -o {output} {file}",
     executeCommand: "{output}",
-  },
-  c: {
-    extension: "c",
-    compileCommand: "gcc -o {output} {file}",
-    executeCommand: "{output}",
-  },
+  }
 };
 
 const executeCode = async (submission: CodeSubmission): Promise<void> => {

@@ -19,6 +19,7 @@ export const initializeKafka = async () => {
     }
 };
 
+// Graceful shutdown becuase my dumb ass won't stop spamming CTRL + C
 process.on('SIGINT', async () => {
     await producer.disconnect();
     process.exit(0);
