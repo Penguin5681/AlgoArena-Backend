@@ -219,7 +219,7 @@ Write-Host ""
 Write-Host "🔍 Testing API endpoint..." -ForegroundColor Yellow
 try {
     Start-Sleep -Seconds 5  # Give the API a moment to start
-    $apiResponse = Invoke-WebRequest -Uri "http://localhost:5001/api/health" -Method GET -TimeoutSec 10 -UseBasicParsing -ErrorAction Stop
+    $apiResponse = Invoke-WebRequest -Uri "http://localhost:5001/health" -Method GET -TimeoutSec 10 -UseBasicParsing -ErrorAction Stop
     if ($apiResponse.StatusCode -eq 200) {
         Write-Host "✅ API is responding on http://localhost:5001" -ForegroundColor Green
     } else {

@@ -3,7 +3,6 @@ import pool from '../config/db';
 
 const router = express.Router();
 
-// Debug endpoint that doesn't require DB
 router.get('/debug', (req, res) => {
     console.log('Debug endpoint called!');
     res.status(200).json({
