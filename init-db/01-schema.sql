@@ -8,6 +8,7 @@
 SET statement_timeout = 0;
 SET lock_timeout = 0;
 SET idle_in_transaction_session_timeout = 0;
+SET transaction_timeout = 0;
 SET client_encoding = 'UTF8';
 SET standard_conforming_strings = on;
 SELECT pg_catalog.set_config('search_path', '', false);
@@ -28,6 +29,7 @@ ALTER TABLE IF EXISTS ONLY public.team_members DROP CONSTRAINT IF EXISTS team_me
 ALTER TABLE IF EXISTS ONLY public.team_members DROP CONSTRAINT IF EXISTS team_members_team_id_fkey;
 ALTER TABLE IF EXISTS ONLY public.questions DROP CONSTRAINT IF EXISTS questions_topic_id_fkey;
 ALTER TABLE IF EXISTS ONLY public.mcqs DROP CONSTRAINT IF EXISTS mcqs_topic_id_fkey;
+ALTER TABLE IF EXISTS ONLY public.submissions DROP CONSTRAINT IF EXISTS fk_submissions_problem;
 ALTER TABLE IF EXISTS ONLY public.coding_problem_topics DROP CONSTRAINT IF EXISTS coding_problem_topics_topic_id_fkey;
 ALTER TABLE IF EXISTS ONLY public.coding_problem_topics DROP CONSTRAINT IF EXISTS coding_problem_topics_problem_id_fkey;
 ALTER TABLE IF EXISTS ONLY public.coding_problem_testcases DROP CONSTRAINT IF EXISTS coding_problem_testcases_problem_id_fkey;
@@ -36,6 +38,7 @@ DROP TRIGGER IF EXISTS trg_insert_user_total_xp ON public.users;
 DROP INDEX IF EXISTS public.idx_testcase_problem;
 DROP INDEX IF EXISTS public.idx_submissions_user_id;
 DROP INDEX IF EXISTS public.idx_submissions_status;
+DROP INDEX IF EXISTS public.idx_submissions_problem_user;
 DROP INDEX IF EXISTS public.idx_problem_topic_id;
 DROP INDEX IF EXISTS public.idx_problem_difficulty;
 ALTER TABLE IF EXISTS ONLY public.users DROP CONSTRAINT IF EXISTS users_username_key;
@@ -283,7 +286,11 @@ CREATE TABLE public.submissions (
     created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
     updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
     stdout text,
-    stderr text
+    stderr text,
+    test_results jsonb,
+    tests_passed integer DEFAULT 0,
+    total_tests integer DEFAULT 0,
+    problem_id text
 );
 
 
@@ -769,10 +776,10 @@ C9.3	9	Level Order Traversal of Binary Tree	Implement a function that performs a
 -- Data for Name: submissions; Type: TABLE DATA; Schema: public; Owner: -
 --
 
-COPY public.submissions (submission_id, user_id, language, code, stdin, status, result, execution_time, memory_usage, created_at, updated_at, stdout, stderr) FROM stdin;
-32	9	python	# Find Two Sum\n# Given an array of integers and a target sum, find two numbers in the array that add up to the target. Return their indices. You may assume that each input has exactly one solution.\n\ndef solve():\n    # Your code goes here\n    print("Hello World")\n\nsolve()	\N	success	\N	42	\N	2025-07-05 13:54:40.056831	2025-07-05 13:54:40.345843	Hello World\n	
-33	9	javascript	// Find Two Sum\n// Given an array of integers and a target sum, find two numbers in the array that add up to the target. Return their indices. You may assume that each input has exactly one solution.\n\nfunction solve() {\n  // Your code goes here\n  console.log("Hello World");\n}\n\nsolve();	\N	success	\N	60	\N	2025-07-05 13:54:56.12465	2025-07-05 13:54:56.197752	Hello World\n	
-34	9	javascript	// Find Two Sum\n// Given an array of integers and a target sum, find two numbers in the array that add up to the target. Return their indices. You may assume that each input has exactly one solution.\n\nfunction solve() {\n  // Your code goes here\n  console.log("Hello Jija ji");\n}\n\nsolve();	\N	success	\N	47	\N	2025-07-05 13:56:51.107071	2025-07-05 13:56:51.169037	Hello Jija ji\n	
+COPY public.submissions (submission_id, user_id, language, code, stdin, status, result, execution_time, memory_usage, created_at, updated_at, stdout, stderr, test_results, tests_passed, total_tests, problem_id) FROM stdin;
+32	9	python	# Find Two Sum\n# Given an array of integers and a target sum, find two numbers in the array that add up to the target. Return their indices. You may assume that each input has exactly one solution.\n\ndef solve():\n    # Your code goes here\n    print("Hello World")\n\nsolve()	\N	success	\N	42	\N	2025-07-05 13:54:40.056831	2025-07-05 13:54:40.345843	Hello World\n		\N	0	0	\N
+33	9	javascript	// Find Two Sum\n// Given an array of integers and a target sum, find two numbers in the array that add up to the target. Return their indices. You may assume that each input has exactly one solution.\n\nfunction solve() {\n  // Your code goes here\n  console.log("Hello World");\n}\n\nsolve();	\N	success	\N	60	\N	2025-07-05 13:54:56.12465	2025-07-05 13:54:56.197752	Hello World\n		\N	0	0	\N
+34	9	javascript	// Find Two Sum\n// Given an array of integers and a target sum, find two numbers in the array that add up to the target. Return their indices. You may assume that each input has exactly one solution.\n\nfunction solve() {\n  // Your code goes here\n  console.log("Hello Jija ji");\n}\n\nsolve();	\N	success	\N	47	\N	2025-07-05 13:56:51.107071	2025-07-05 13:56:51.169037	Hello Jija ji\n		\N	0	0	\N
 \.
 
 
@@ -1204,6 +1211,13 @@ CREATE INDEX idx_problem_topic_id ON public.coding_problem_topics USING btree (t
 
 
 --
+-- Name: idx_submissions_problem_user; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_submissions_problem_user ON public.submissions USING btree (problem_id, user_id);
+
+
+--
 -- Name: idx_submissions_status; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1260,6 +1274,14 @@ ALTER TABLE ONLY public.coding_problem_topics
 
 ALTER TABLE ONLY public.coding_problem_topics
     ADD CONSTRAINT coding_problem_topics_topic_id_fkey FOREIGN KEY (topic_id) REFERENCES public.problem_topics(id) ON DELETE CASCADE;
+
+
+--
+-- Name: submissions fk_submissions_problem; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.submissions
+    ADD CONSTRAINT fk_submissions_problem FOREIGN KEY (problem_id) REFERENCES public.coding_problems(id) ON DELETE CASCADE;
 
 
 --

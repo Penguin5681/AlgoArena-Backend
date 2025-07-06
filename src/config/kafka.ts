@@ -3,7 +3,7 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const kafka = new Kafka({
+export const kafka = new Kafka({
     clientId: 'algoarena-backend',
     brokers: [process.env.KAFKA_BROKER || 'localhost:9092'],
 });
