@@ -1,0 +1,26 @@
+[
+  {
+    "problemId": "two-sum",
+    "language": "java",
+    "template": "class Solution {\n    public int[] twoSum(int[] nums, int target) {\n        // Your code here\n        // Find two numbers in the array that add up to target\n        // Return their indices as an array [index1, index2]\n        return new int[]{0, 0}; // placeholder return\n    }\n}",
+    "isBase64Encoded": false
+  },
+  {
+    "problemId": "two-sum",
+    "language": "javascript",
+    "template": "/**\n * @param {number[]} nums\n * @param {number} target\n * @return {number[]}\n */\nfunction twoSum(nums, target) {\n    // Your code here\n    // Find two numbers in the array that add up to target\n    // Return their indices as an array [index1, index2]\n    return [0, 0]; // placeholder return\n}",
+    "isBase64Encoded": false
+  },
+  {
+    "problemId": "two-sum",
+    "language": "cpp",
+    "template": "#include <vector>\n\nclass Solution {\npublic:\n    std::vector<int> twoSum(std::vector<int>& nums, int target) {\n        // Your code here\n        // Find two numbers in the array that add up to target\n        // Return their indices as a vector {index1, index2}\n        return {0, 0}; // placeholder return\n    }\n};",
+    "isBase64Encoded": false
+  },
+  {
+    "problemId": "two-sum",
+    "language": "python",
+    "template": "from typing import List\n\nclass Solution:\n    def twoSum(self, nums: List[int], target: int) -> List[int]:\n        # Your code here\n        # Find two numbers in the array that add up to target\n        # Return their indices as a list [index1, index2]\n        return [0, 0] # placeholder return",
+    "isBase64Encoded": false
+  }
+]

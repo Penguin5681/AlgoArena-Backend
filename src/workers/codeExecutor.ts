@@ -385,6 +385,34 @@ const executeCommand = (
   });
 };
 
+const processTestCaseInput = (input: string, problemId: string): string => {
+  switch (problemId) {
+    case 'two-sum':
+      const numsMatch = input.match(/nums\s*=\s*(\[[\d,\s]+\])/);
+      const targetMatch = input.match(/target\s*=\s*(\d+)/);
+      
+      if (numsMatch && targetMatch) {
+        const nums = numsMatch[1];
+        const target = targetMatch[1];
+        
+        return `${nums}\n${target}`;
+      }
+      break;
+    
+    case 'valid-parentheses':
+      const sMatch = input.match(/s\s*=\s*"([^"]*)"/);
+      if (sMatch) {
+        return sMatch[1];
+      }
+      break;
+    
+    default:
+      return input;
+  }
+  
+  return input;
+};
+
 export const startCodeExecutor = async () => {
   try {
     await consumer.connect();

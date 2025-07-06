@@ -85,25 +85,20 @@ export class SeedProblemsController {
 
             for (const problemData of jsonData as ProblemData[]) {
                 try {
-                    // Validate required fields
                     if (!problemData.title || !problemData.slug || !problemData.description || 
                             !problemData.difficulty || !problemData.topic) {
                         console.warn(`Skipping problem with missing required fields: ${problemData.title || 'Unknown'}`);
                         continue;
                     }
 
-                    // Get or create topic
                     const topicId = await this.getOrCreateTopic(problemData.topic);
 
-                    // Calculate XP
                     const xp = this.getXPForDifficulty(problemData.difficulty);
 
-                    // Prepare constraints text
                     const constraintsText = Array.isArray(problemData.constraints) 
                         ? problemData.constraints.join('\n') 
                         : problemData.constraints || '';
 
-                    // Insert problem
                     const problemResult = await client.query(`
                         INSERT INTO coding_problems 
                         (id, title, description, constraints, difficulty, time_complexity, space_complexity, hints, xp)
@@ -132,14 +127,12 @@ export class SeedProblemsController {
 
                     const problemId = problemResult.rows[0].id;
 
-                    // Link problem to topic
                     await client.query(`
                         INSERT INTO coding_problem_topics (problem_id, topic_id)
                         VALUES ($1, $2)
                         ON CONFLICT (problem_id, topic_id) DO NOTHING
                     `, [problemId, topicId]);
 
-                    // Insert test cases from examples
                     if (problemData.examples && Array.isArray(problemData.examples)) {
                         for (const example of problemData.examples) {
                             await client.query(`
@@ -158,7 +151,6 @@ export class SeedProblemsController {
 
                 } catch (error) {
                     console.error(`Error seeding problem ${problemData.title}:`, error);
-                    // Continue with next problem instead of failing entire operation
                 }
             }
 
