@@ -27,23 +27,23 @@ interface LanguageConfig {
   executeCommand: string;
 }
 
-const languageConfigs: Record<string, LanguageConfig> = {
+const languageConfigsTest: Record<string, LanguageConfig> = {
   python: {
     extension: "py",
-    executeCommand: "/usr/bin/python3 {file}",
+    executeCommand: "python3 {file}",
   },
   javascript: {
     extension: "js",
-    executeCommand: "/home/thechillguy69/.nvm/versions/node/v22.17.0/bin/node {file}",
+    executeCommand: "node {file}",
   },
   java: {
     extension: "java",
-    compileCommand: "/usr/bin/javac {file}",
-    executeCommand: "/usr/bin/java {className}",
+    compileCommand: "javac {file}",
+    executeCommand: "java {className}",
   },
   cpp: {
     extension: "cpp",
-    compileCommand: "/usr/bin/g++ -o {output} {file}",
+    compileCommand: "g++ -o {output} {file}",
     executeCommand: "{output}",
   }
 };
@@ -57,7 +57,7 @@ const executeCode = async (submission: CodeSubmission): Promise<void> => {
       ["running", submissionId]
     );
 
-    const config = languageConfigs[language.toLowerCase()];
+    const config = languageConfigsTest[language.toLowerCase()];
     if (!config) {
       throw new Error(`Unsupported language: ${language}`);
     }
@@ -67,7 +67,24 @@ const executeCode = async (submission: CodeSubmission): Promise<void> => {
       fs.mkdirSync(tempDir, { recursive: true });
     }
 
-    const fileName = `code_${submissionId}.${config.extension}`;
+    // Handle Java class name extraction
+    let fileName = `code_${submissionId}.${config.extension}`;
+    let className = `code_${submissionId}`;
+    
+    if (language.toLowerCase() === "java") {
+      // Extract class name from Java code
+      const publicClassMatch = code.match(/public\s+class\s+(\w+)/);
+      const classMatch = code.match(/class\s+(\w+)/);
+      
+      if (publicClassMatch) {
+        className = publicClassMatch[1];
+        fileName = `${className}.java`;
+      } else if (classMatch) {
+        className = classMatch[1];
+        fileName = `${className}.java`;
+      }
+    }
+
     const filePath = path.join(tempDir, fileName);
     fs.writeFileSync(filePath, code);
 
@@ -81,32 +98,45 @@ const executeCode = async (submission: CodeSubmission): Promise<void> => {
     let outputFile = "";
 
     if (config.compileCommand) {
-      outputFile = path.join(tempDir, `output_${submissionId}`);
-      const compileCmd = config.compileCommand
-        .replace("{file}", filePath)
-        .replace("{output}", outputFile);
+      if (language.toLowerCase() === "java") {
+        const compileCmd = config.compileCommand.replace("{file}", filePath);
+        
+        console.log(`Compiling with command: ${compileCmd}`);
+        const compileResult = await executeCommand(compileCmd, tempDir, 10000);
 
-      console.log(`Compiling with command: ${compileCmd}`);
-      const compileResult = await executeCommand(compileCmd, tempDir, 10000);
+        if (compileResult.stderr && compileResult.stderr.toLowerCase().includes("error")) {
+          throw new Error(`Compilation failed: ${compileResult.stderr}`);
+        }
 
-      if (compileResult.stderr && compileResult.stderr.includes("error:")) {
-        throw new Error(`Compilation failed: ${compileResult.stderr}`);
+        const classFile = path.join(tempDir, `${className}.class`);
+        if (!fs.existsSync(classFile)) {
+          throw new Error(`Compilation failed: ${className}.class file not created. Stderr: ${compileResult.stderr}`);
+        }
+      } else {
+        outputFile = path.join(tempDir, `output_${submissionId}`);
+        const compileCmd = config.compileCommand
+          .replace("{file}", filePath)
+          .replace("{output}", outputFile);
+
+        console.log(`Compiling with command: ${compileCmd}`);
+        const compileResult = await executeCommand(compileCmd, tempDir, 10000);
+
+        if (compileResult.stderr && compileResult.stderr.includes("error:")) {
+          throw new Error(`Compilation failed: ${compileResult.stderr}`);
+        }
+
+        if (!fs.existsSync(outputFile)) {
+          throw new Error(`Compilation failed: executable not created. Stderr: ${compileResult.stderr}`);
+        }
+
+        fs.chmodSync(outputFile, "755");
       }
-
-      if (!fs.existsSync(outputFile)) {
-        throw new Error(`Compilation failed: executable not created`);
-      }
-
-      fs.chmodSync(outputFile, "755");
     }
 
     let executeCmd = config.executeCommand;
 
     if (language.toLowerCase() === "java") {
-      const className = `code_${submissionId}`;
-      executeCmd = executeCmd
-        .replace("{className}", className)
-        .replace("{dir}", tempDir);
+      executeCmd = executeCmd.replace("{className}", className);
     } else if (config.compileCommand) {
       executeCmd = executeCmd.replace("{output}", outputFile);
     } else {
