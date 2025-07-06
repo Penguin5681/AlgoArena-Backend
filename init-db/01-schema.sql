@@ -8,7 +8,6 @@
 SET statement_timeout = 0;
 SET lock_timeout = 0;
 SET idle_in_transaction_session_timeout = 0;
-SET transaction_timeout = 0;
 SET client_encoding = 'UTF8';
 SET standard_conforming_strings = on;
 SELECT pg_catalog.set_config('search_path', '', false);
@@ -33,9 +32,11 @@ ALTER TABLE IF EXISTS ONLY public.submissions DROP CONSTRAINT IF EXISTS fk_submi
 ALTER TABLE IF EXISTS ONLY public.coding_problem_topics DROP CONSTRAINT IF EXISTS coding_problem_topics_topic_id_fkey;
 ALTER TABLE IF EXISTS ONLY public.coding_problem_topics DROP CONSTRAINT IF EXISTS coding_problem_topics_problem_id_fkey;
 ALTER TABLE IF EXISTS ONLY public.coding_problem_testcases DROP CONSTRAINT IF EXISTS coding_problem_testcases_problem_id_fkey;
+ALTER TABLE IF EXISTS ONLY public.coding_problem_templates DROP CONSTRAINT IF EXISTS coding_problem_templates_problem_id_fkey;
 DROP TRIGGER IF EXISTS trg_update_total_xp_on_log ON public.user_xp_log;
 DROP TRIGGER IF EXISTS trg_insert_user_total_xp ON public.users;
 DROP INDEX IF EXISTS public.idx_testcase_problem;
+DROP INDEX IF EXISTS public.idx_templates_problem_language;
 DROP INDEX IF EXISTS public.idx_submissions_user_id;
 DROP INDEX IF EXISTS public.idx_submissions_status;
 DROP INDEX IF EXISTS public.idx_submissions_problem_user;
@@ -66,6 +67,8 @@ ALTER TABLE IF EXISTS ONLY public.mcqs DROP CONSTRAINT IF EXISTS mcqs_pkey;
 ALTER TABLE IF EXISTS ONLY public.coding_problems DROP CONSTRAINT IF EXISTS coding_problems_pkey;
 ALTER TABLE IF EXISTS ONLY public.coding_problem_topics DROP CONSTRAINT IF EXISTS coding_problem_topics_pkey;
 ALTER TABLE IF EXISTS ONLY public.coding_problem_testcases DROP CONSTRAINT IF EXISTS coding_problem_testcases_pkey;
+ALTER TABLE IF EXISTS ONLY public.coding_problem_templates DROP CONSTRAINT IF EXISTS coding_problem_templates_problem_id_language_key;
+ALTER TABLE IF EXISTS ONLY public.coding_problem_templates DROP CONSTRAINT IF EXISTS coding_problem_templates_pkey;
 ALTER TABLE IF EXISTS public.users ALTER COLUMN id DROP DEFAULT;
 ALTER TABLE IF EXISTS public.user_xp_log ALTER COLUMN id DROP DEFAULT;
 ALTER TABLE IF EXISTS public.user_topic_progress ALTER COLUMN id DROP DEFAULT;
@@ -75,6 +78,7 @@ ALTER TABLE IF EXISTS public.teams ALTER COLUMN id DROP DEFAULT;
 ALTER TABLE IF EXISTS public.submissions ALTER COLUMN submission_id DROP DEFAULT;
 ALTER TABLE IF EXISTS public.problem_topics ALTER COLUMN id DROP DEFAULT;
 ALTER TABLE IF EXISTS public.coding_problem_testcases ALTER COLUMN id DROP DEFAULT;
+ALTER TABLE IF EXISTS public.coding_problem_templates ALTER COLUMN id DROP DEFAULT;
 DROP SEQUENCE IF EXISTS public.users_id_seq;
 DROP TABLE IF EXISTS public.users;
 DROP SEQUENCE IF EXISTS public.user_xp_log_id_seq;
@@ -100,6 +104,8 @@ DROP TABLE IF EXISTS public.coding_problems;
 DROP TABLE IF EXISTS public.coding_problem_topics;
 DROP SEQUENCE IF EXISTS public.coding_problem_testcases_id_seq;
 DROP TABLE IF EXISTS public.coding_problem_testcases;
+DROP SEQUENCE IF EXISTS public.coding_problem_templates_id_seq;
+DROP TABLE IF EXISTS public.coding_problem_templates;
 DROP FUNCTION IF EXISTS public.update_user_total_xp_on_log();
 DROP FUNCTION IF EXISTS public.insert_user_total_xp();
 DROP TYPE IF EXISTS public.submission_status;
@@ -147,6 +153,47 @@ $$;
 SET default_tablespace = '';
 
 SET default_table_access_method = heap;
+
+--
+-- Name: coding_problem_templates; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.coding_problem_templates (
+    id integer NOT NULL,
+    problem_id text NOT NULL,
+    language character varying(50) NOT NULL,
+    template text NOT NULL,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    is_base64_encoded boolean DEFAULT false
+);
+
+
+--
+-- Name: COLUMN coding_problem_templates.template; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.coding_problem_templates.template IS 'Template code, can be base64 encoded if is_base64_encoded is true';
+
+
+--
+-- Name: coding_problem_templates_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.coding_problem_templates_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: coding_problem_templates_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.coding_problem_templates_id_seq OWNED BY public.coding_problem_templates.id;
+
 
 --
 -- Name: coding_problem_testcases; Type: TABLE; Schema: public; Owner: -
@@ -556,6 +603,13 @@ ALTER SEQUENCE public.users_id_seq OWNED BY public.users.id;
 
 
 --
+-- Name: coding_problem_templates id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.coding_problem_templates ALTER COLUMN id SET DEFAULT nextval('public.coding_problem_templates_id_seq'::regclass);
+
+
+--
 -- Name: coding_problem_testcases id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -616,6 +670,18 @@ ALTER TABLE ONLY public.user_xp_log ALTER COLUMN id SET DEFAULT nextval('public.
 --
 
 ALTER TABLE ONLY public.users ALTER COLUMN id SET DEFAULT nextval('public.users_id_seq'::regclass);
+
+
+--
+-- Data for Name: coding_problem_templates; Type: TABLE DATA; Schema: public; Owner: -
+--
+
+COPY public.coding_problem_templates (id, problem_id, language, template, created_at, is_base64_encoded) FROM stdin;
+5	two-sum	java	class Solution {\n    public int[] twoSum(int[] nums, int target) {\n        // Your code here\n        // Find two numbers in the array that add up to target\n        // Return their indices as an array [index1, index2]\n        return new int[]{0, 0}; // placeholder return\n    }\n}	2025-07-06 17:06:46.128876	f
+6	two-sum	javascript	/**\n * @param {number[]} nums\n * @param {number} target\n * @return {number[]}\n */\nfunction twoSum(nums, target) {\n    // Your code here\n    // Find two numbers in the array that add up to target\n    // Return their indices as an array [index1, index2]\n    return [0, 0]; // placeholder return\n}	2025-07-06 17:06:46.128876	f
+7	two-sum	cpp	#include <vector>\n\nclass Solution {\npublic:\n    std::vector<int> twoSum(std::vector<int>& nums, int target) {\n        // Your code here\n        // Find two numbers in the array that add up to target\n        // Return their indices as a vector {index1, index2}\n        return {0, 0}; // placeholder return\n    }\n};	2025-07-06 17:06:46.128876	f
+8	two-sum	python	from typing import List\n\nclass Solution:\n    def twoSum(self, nums: List[int], target: int) -> List[int]:\n        # Your code here\n        # Find two numbers in the array that add up to target\n        # Return their indices as a list [index1, index2]\n        return [0, 0] # placeholder return	2025-07-06 17:06:46.128876	f
+\.
 
 
 --
@@ -777,9 +843,17 @@ C9.3	9	Level Order Traversal of Binary Tree	Implement a function that performs a
 --
 
 COPY public.submissions (submission_id, user_id, language, code, stdin, status, result, execution_time, memory_usage, created_at, updated_at, stdout, stderr, test_results, tests_passed, total_tests, problem_id) FROM stdin;
+41	9	javascript	function solution(input, target) {\n    const numMap = new Map(); \n\n    for (let i = 0; i < input.length; i++) {\n        const currentNum = input[i];\n        const complement = target - currentNum;\n\n        if (numMap.has(complement)) {\n            return [numMap.get(complement), i];\n        }\n\n        numMap.set(currentNum, i);\n    }\n    return [];\n}\n\nsolution();	\N	success	\N	188	\N	2025-07-06 16:03:15.962901	2025-07-06 16:03:16.172957		/tmp/code_41/code_41.js:4\n    for (let i = 0; i < input.length; i++) {\n                              ^\n\nTypeError: Cannot read properties of undefined (reading 'length')\n    at solution (/tmp/code_41/code_41.js:4:31)\n    at Object.<anonymous> (/tmp/code_41/code_41.js:17:1)\n    at Module._compile (node:internal/modules/cjs/loader:1356:14)\n    at Module._extensions..js (node:internal/modules/cjs/loader:1414:10)\n    at Module.load (node:internal/modules/cjs/loader:1197:32)\n    at Module._load (node:internal/modules/cjs/loader:1013:12)\n    at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:128:12)\n    at node:internal/main/run_main_module:28:49\n\nNode.js v18.19.1\n	\N	0	0	\N
+35	9	javascript	function solution(input) {\n    // Your solution here\n    \n    return result;\n}	\N	success	\N	229	\N	2025-07-06 14:35:17.737085	2025-07-06 14:35:18.016946			\N	0	0	\N
+38	9	javascript	function solution(input) {\n    // Your solution here\n    \n    return result;\n}	\N	success	\N	211	\N	2025-07-06 14:53:17.34218	2025-07-06 14:53:17.602797			\N	0	0	\N
+42	9	cpp	#include <vector>\n\nclass Solution {\npublic:\n    std::vector<int> twoSum(std::vector<int>& nums, int target) {\n        // Your code here\n        // Find two numbers in the array that add up to target\n        // Return their indices as a vector {index1, index2}\n        return {0, 0}; // placeholder return\n    }\n};	\N	error	\N	\N	\N	2025-07-06 17:14:42.835872	2025-07-06 17:14:43.471473	\N	Compilation failed: /usr/bin/ld: /usr/lib/gcc/x86_64-linux-gnu/13/../../../x86_64-linux-gnu/Scrt1.o: in function `_start':\n(.text+0x1b): undefined reference to `main'\ncollect2: error: ld returned 1 exit status\n	\N	0	0	\N
 32	9	python	# Find Two Sum\n# Given an array of integers and a target sum, find two numbers in the array that add up to the target. Return their indices. You may assume that each input has exactly one solution.\n\ndef solve():\n    # Your code goes here\n    print("Hello World")\n\nsolve()	\N	success	\N	42	\N	2025-07-05 13:54:40.056831	2025-07-05 13:54:40.345843	Hello World\n		\N	0	0	\N
 33	9	javascript	// Find Two Sum\n// Given an array of integers and a target sum, find two numbers in the array that add up to the target. Return their indices. You may assume that each input has exactly one solution.\n\nfunction solve() {\n  // Your code goes here\n  console.log("Hello World");\n}\n\nsolve();	\N	success	\N	60	\N	2025-07-05 13:54:56.12465	2025-07-05 13:54:56.197752	Hello World\n		\N	0	0	\N
 34	9	javascript	// Find Two Sum\n// Given an array of integers and a target sum, find two numbers in the array that add up to the target. Return their indices. You may assume that each input has exactly one solution.\n\nfunction solve() {\n  // Your code goes here\n  console.log("Hello Jija ji");\n}\n\nsolve();	\N	success	\N	47	\N	2025-07-05 13:56:51.107071	2025-07-05 13:56:51.169037	Hello Jija ji\n		\N	0	0	\N
+36	9	javascript	function solution(input) {\n    // Your solution here\n    \n    return result;\n}	\N	success	\N	168	\N	2025-07-06 14:36:39.209486	2025-07-06 14:36:39.406686			\N	0	0	\N
+37	9	javascript	function solution(input) {\n    // Your solution here\n    console.log('Helo wordl');\n    // return result;\n}\n\nsolution();	\N	success	\N	118	\N	2025-07-06 14:36:59.508692	2025-07-06 14:36:59.642391	Helo wordl\n		\N	0	0	\N
+39	9	javascript	function solution(input) {\n    // Your solution here\n    console.log("HELLO FROM PRANAV");    \n}\n\nsolution();	\N	success	\N	243	\N	2025-07-06 14:53:43.993867	2025-07-06 14:53:44.255169	HELLO FROM PRANAV\n		\N	0	0	\N
+40	9	javascript	function solution(input, target) {\n    const numMap = new Map(); \n\n    for (let i = 0; i < input.length; i++) {\n        const currentNum = input[i];\n        const complement = target - currentNum;\n\n        if (numMap.has(complement)) {\n            return [numMap.get(complement), i];\n        }\n\n        numMap.set(currentNum, i);\n    }\n    return [];\n}\n\nsolution();	\N	success	\N	220	\N	2025-07-06 16:02:56.214015	2025-07-06 16:02:56.458954		/tmp/code_40/code_40.js:4\n    for (let i = 0; i < input.length; i++) {\n                              ^\n\nTypeError: Cannot read properties of undefined (reading 'length')\n    at solution (/tmp/code_40/code_40.js:4:31)\n    at Object.<anonymous> (/tmp/code_40/code_40.js:17:1)\n    at Module._compile (node:internal/modules/cjs/loader:1356:14)\n    at Module._extensions..js (node:internal/modules/cjs/loader:1414:10)\n    at Module.load (node:internal/modules/cjs/loader:1197:32)\n    at Module._load (node:internal/modules/cjs/loader:1013:12)\n    at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:128:12)\n    at node:internal/main/run_main_module:28:49\n\nNode.js v18.19.1\n	\N	0	0	\N
 \.
 
 
@@ -934,6 +1008,13 @@ COPY public.users (id, username, email, password, firebase_uid, profile_picture)
 
 
 --
+-- Name: coding_problem_templates_id_seq; Type: SEQUENCE SET; Schema: public; Owner: -
+--
+
+SELECT pg_catalog.setval('public.coding_problem_templates_id_seq', 8, true);
+
+
+--
 -- Name: coding_problem_testcases_id_seq; Type: SEQUENCE SET; Schema: public; Owner: -
 --
 
@@ -951,7 +1032,7 @@ SELECT pg_catalog.setval('public.problem_topics_id_seq', 6, true);
 -- Name: submissions_submission_id_seq; Type: SEQUENCE SET; Schema: public; Owner: -
 --
 
-SELECT pg_catalog.setval('public.submissions_submission_id_seq', 34, true);
+SELECT pg_catalog.setval('public.submissions_submission_id_seq', 42, true);
 
 
 --
@@ -994,6 +1075,22 @@ SELECT pg_catalog.setval('public.user_xp_log_id_seq', 18, true);
 --
 
 SELECT pg_catalog.setval('public.users_id_seq', 9, true);
+
+
+--
+-- Name: coding_problem_templates coding_problem_templates_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.coding_problem_templates
+    ADD CONSTRAINT coding_problem_templates_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: coding_problem_templates coding_problem_templates_problem_id_language_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.coding_problem_templates
+    ADD CONSTRAINT coding_problem_templates_problem_id_language_key UNIQUE (problem_id, language);
 
 
 --
@@ -1232,6 +1329,13 @@ CREATE INDEX idx_submissions_user_id ON public.submissions USING btree (user_id)
 
 
 --
+-- Name: idx_templates_problem_language; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_templates_problem_language ON public.coding_problem_templates USING btree (problem_id, language);
+
+
+--
 -- Name: idx_testcase_problem; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1250,6 +1354,14 @@ CREATE TRIGGER trg_insert_user_total_xp AFTER INSERT ON public.users FOR EACH RO
 --
 
 CREATE TRIGGER trg_update_total_xp_on_log AFTER INSERT ON public.user_xp_log FOR EACH ROW EXECUTE FUNCTION public.update_user_total_xp_on_log();
+
+
+--
+-- Name: coding_problem_templates coding_problem_templates_problem_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.coding_problem_templates
+    ADD CONSTRAINT coding_problem_templates_problem_id_fkey FOREIGN KEY (problem_id) REFERENCES public.coding_problems(id) ON DELETE CASCADE;
 
 
 --
