@@ -19,8 +19,9 @@ interface CodeSubmission {
   language: string;
   code: string;
   stdin?: string;
-  problemId?: string; // For test case validation
+  problemId?: string;
   userId?: number;
+  isRawSubmission?: boolean;
 }
 
 interface TestCase {
@@ -64,11 +65,19 @@ const languageConfigsTest: Record<string, LanguageConfig> = {
     extension: "cpp",
     compileCommand: "g++ -o {output} {file}",
     executeCommand: "{output}",
-  }
+  },
 };
 
 const executeCode = async (submission: CodeSubmission): Promise<void> => {
-  const { submissionId, language, code, stdin, problemId, userId } = submission;
+  const {
+    submissionId,
+    language,
+    code,
+    stdin,
+    problemId,
+    userId,
+    isRawSubmission,
+  } = submission;
 
   try {
     await pool.query(
@@ -86,14 +95,13 @@ const executeCode = async (submission: CodeSubmission): Promise<void> => {
       fs.mkdirSync(tempDir, { recursive: true });
     }
 
-    // Handle Java class name extraction
     let fileName = `code_${submissionId}.${config.extension}`;
     let className = `code_${submissionId}`;
-    
-    if (language.toLowerCase() === "java") {
+
+    if (language.toLowerCase() === "java" && !isRawSubmission) {
       const publicClassMatch = code.match(/public\s+class\s+(\w+)/);
       const classMatch = code.match(/class\s+(\w+)/);
-      
+
       if (publicClassMatch) {
         className = publicClassMatch[1];
         fileName = `${className}.java`;
@@ -109,21 +117,25 @@ const executeCode = async (submission: CodeSubmission): Promise<void> => {
     const startTime = Date.now();
     let outputFile = "";
 
-    // Compilation phase
     if (config.compileCommand) {
       if (language.toLowerCase() === "java") {
         const compileCmd = config.compileCommand.replace("{file}", filePath);
-        
+
         console.log(`Compiling with command: ${compileCmd}`);
         const compileResult = await executeCommand(compileCmd, tempDir, 10000);
 
-        if (compileResult.stderr && compileResult.stderr.toLowerCase().includes("error")) {
+        if (
+          compileResult.stderr &&
+          compileResult.stderr.toLowerCase().includes("error")
+        ) {
           throw new Error(`Compilation failed: ${compileResult.stderr}`);
         }
 
         const classFile = path.join(tempDir, `${className}.class`);
         if (!fs.existsSync(classFile)) {
-          throw new Error(`Compilation failed: ${className}.class file not created. Stderr: ${compileResult.stderr}`);
+          throw new Error(
+            `Compilation failed: ${className}.class file not created. Stderr: ${compileResult.stderr}`
+          );
         }
       } else {
         outputFile = path.join(tempDir, `output_${submissionId}`);
@@ -139,23 +151,55 @@ const executeCode = async (submission: CodeSubmission): Promise<void> => {
         }
 
         if (!fs.existsSync(outputFile)) {
-          throw new Error(`Compilation failed: executable not created. Stderr: ${compileResult.stderr}`);
+          throw new Error(
+            `Compilation failed: executable not created. Stderr: ${compileResult.stderr}`
+          );
         }
 
         fs.chmodSync(outputFile, "755");
       }
     }
 
-    // If problemId is provided, run test cases; otherwise run with stdin
-    if (problemId) {
-      await runTestCases(submissionId, problemId, tempDir, fileName, className, config, language, startTime);
+    if (isRawSubmission && problemId) {
+      if (language.toLowerCase() === "cpp") {
+        await await runCppSubmission(
+          submissionId,
+          problemId,
+          tempDir,
+          filePath,
+          startTime
+        );
+      }
+    } else if (problemId) {
+      await runTestCases(
+        submissionId,
+        problemId,
+        tempDir,
+        fileName,
+        className,
+        config,
+        language,
+        startTime
+      );
     } else {
-      await runSingleExecution(submissionId, stdin, tempDir, fileName, className, config, language, startTime);
+      await runSingleExecution(
+        submissionId,
+        stdin,
+        tempDir,
+        fileName,
+        className,
+        config,
+        language,
+        startTime
+      );
     }
 
     fs.rmSync(tempDir, { recursive: true, force: true });
   } catch (error) {
-    console.error(`Error executing code for submission ${submissionId}:`, error);
+    console.error(
+      `Error executing code for submission ${submissionId}:`,
+      error
+    );
 
     await pool.query(
       `UPDATE submissions 
@@ -175,6 +219,135 @@ const executeCode = async (submission: CodeSubmission): Promise<void> => {
   }
 };
 
+const runCppSubmission = async (
+  submissionId: number,
+  problemId: string,
+  tempDir: string,
+  sourceFile: string,
+  startTime: number
+): Promise<void> => {
+  try {
+    const testCasesResult = await pool.query(
+      "SELECT id, input, expected_output, is_sample FROM coding_problem_testcases WHERE problem_id = $1",
+      [problemId]
+    );
+
+    const testCases = testCasesResult.rows;
+    if (testCases.length === 0) {
+      throw new Error(`No test cases found for problem ${problemId}`);
+    }
+
+    const outputFile = path.join(tempDir, "solution");
+    const compileCommand = `g++ -std=c++17 -o ${outputFile} ${sourceFile}`;
+
+    console.log(
+      `[Submission ${submissionId}] Compiling with: ${compileCommand}`
+    );
+    const compileResult = await executeCommand(compileCommand, tempDir, 10000);
+
+    if (compileResult.stderr && compileResult.stderr.includes("error")) {
+      console.log(
+        `[Submission ${submissionId}] Compilation failed: ${compileResult.stderr}`
+      );
+      await pool.query(
+        `UPDATE submissions 
+         SET status = 'error', stderr = $1, updated_at = CURRENT_TIMESTAMP 
+         WHERE submission_id = $2`,
+        [compileResult.stderr, submissionId]
+      );
+      return;
+    }
+
+    if (!fs.existsSync(outputFile)) {
+      const error = `Compilation succeeded but executable not found`;
+      console.log(`[Submission ${submissionId}] ${error}`);
+      await pool.query(
+        `UPDATE submissions 
+         SET status = 'error', stderr = $1, updated_at = CURRENT_TIMESTAMP 
+         WHERE submission_id = $2`,
+        [error, submissionId]
+      );
+      return;
+    }
+
+    fs.chmodSync(outputFile, "755");
+
+    let totalTestsPassed = 0;
+    const testResults = [];
+
+    for (const testCase of testCases) {
+      console.log(
+        `[Submission ${submissionId}] Running test case ${testCase.id}`
+      );
+
+      const inputFile = path.join(tempDir, `input_${testCase.id}.txt`);
+      const inputContent = testCase.input.replace(/\\n/g, "\n");
+      fs.writeFileSync(inputFile, inputContent);
+
+      console.log(
+        `[Submission ${submissionId}] Input file content: ${inputContent}`
+      );
+
+      const runCommand = `${outputFile} < ${inputFile}`;
+      console.log(`[Submission ${submissionId}] Executing: ${runCommand}`);
+
+      const runResult = await executeCommand(runCommand, tempDir, 5000);
+
+      const actualOutput = runResult.stdout.trim();
+      const expectedOutput = testCase.expected_output.trim();
+      const passed = isOutputCorrect(actualOutput, expectedOutput);
+
+      console.log(`[Submission ${submissionId}] Test ${testCase.id} result:
+        - Expected: "${expectedOutput}"
+        - Actual: "${actualOutput}"
+        - Passed: ${passed}`);
+
+      if (passed) totalTestsPassed++;
+
+      testResults.push({
+        testCaseId: testCase.id,
+        input: testCase.input,
+        expectedOutput,
+        actualOutput,
+        passed,
+        isSample: testCase.is_sample,
+      });
+    }
+
+    const executionTime = Date.now() - startTime;
+    await pool.query(
+      `UPDATE submissions 
+       SET status = $1, 
+           execution_time = $2, 
+           test_results = $3, 
+           tests_passed = $4, 
+           total_tests = $5, 
+           updated_at = CURRENT_TIMESTAMP
+       WHERE submission_id = $6`,
+      [
+        totalTestsPassed === testCases.length ? "success" : "failed",
+        executionTime,
+        JSON.stringify(testResults),
+        totalTestsPassed,
+        testCases.length,
+        submissionId,
+      ]
+    );
+
+    console.log(
+      `[Submission ${submissionId}] Completed: ${totalTestsPassed}/${testCases.length} tests passed`
+    );
+  } catch (error) {
+    console.error(`[Submission ${submissionId}] Error:`, error);
+    await pool.query(
+      `UPDATE submissions 
+       SET status = 'error', stderr = $1, updated_at = CURRENT_TIMESTAMP 
+       WHERE submission_id = $2`,
+      [error instanceof Error ? error.message : String(error), submissionId]
+    );
+  }
+};
+
 const runTestCases = async (
   submissionId: number,
   problemId: string,
@@ -185,9 +358,8 @@ const runTestCases = async (
   language: string,
   startTime: number
 ): Promise<void> => {
-  // Get test cases from database
   const testCasesResult = await pool.query(
-    'SELECT id, input, expected_output, is_sample FROM coding_problem_testcases WHERE problem_id = $1 ORDER BY id',
+    "SELECT id, input, expected_output, is_sample FROM coding_problem_testcases WHERE problem_id = $1 ORDER BY id",
     [problemId]
   );
 
@@ -195,30 +367,33 @@ const runTestCases = async (
   const testResults: TestResult[] = [];
   let allTestsPassed = true;
 
-  console.log(`Running ${testCases.length} test cases for problem ${problemId}`);
+  console.log(
+    `Running ${testCases.length} test cases for problem ${problemId}`
+  );
 
   for (const testCase of testCases) {
     const testStartTime = Date.now();
-    
+
     try {
-      // Create input file for this test case
       const inputFile = path.join(tempDir, `test_${testCase.id}_input.txt`);
       fs.writeFileSync(inputFile, testCase.input);
 
-      // Prepare execution command
       let executeCmd = config.executeCommand;
-      
+
       if (language.toLowerCase() === "java") {
         executeCmd = executeCmd.replace("{className}", className);
       } else if (config.compileCommand) {
-        executeCmd = executeCmd.replace("{output}", path.join(tempDir, `output_${submissionId}`));
+        executeCmd = executeCmd.replace(
+          "{output}",
+          path.join(tempDir, `output_${submissionId}`)
+        );
       } else {
         executeCmd = executeCmd.replace("{file}", path.join(tempDir, fileName));
       }
 
       const fullCommand = `${executeCmd} < ${inputFile}`;
       const result = await executeCommand(fullCommand, tempDir, 5000);
-      
+
       const testExecutionTime = Date.now() - testStartTime;
       const actualOutput = result.stdout.trim();
       const expectedOutput = testCase.expected_output.trim();
@@ -235,11 +410,10 @@ const runTestCases = async (
         actual_output: actualOutput,
         passed,
         execution_time: testExecutionTime,
-        error: result.stderr || undefined
+        error: result.stderr || undefined,
       });
 
-      console.log(`Test case ${testCase.id}: ${passed ? 'PASSED' : 'FAILED'}`);
-
+      console.log(`Test case ${testCase.id}: ${passed ? "PASSED" : "FAILED"}`);
     } catch (error) {
       allTestsPassed = false;
       testResults.push({
@@ -249,7 +423,7 @@ const runTestCases = async (
         actual_output: "",
         passed: false,
         execution_time: Date.now() - testStartTime,
-        error: error instanceof Error ? error.message : "Unknown error"
+        error: error instanceof Error ? error.message : "Unknown error",
       });
 
       console.log(`Test case ${testCase.id}: ERROR - ${error}`);
@@ -257,8 +431,12 @@ const runTestCases = async (
   }
 
   const totalExecutionTime = Date.now() - startTime;
-  const passedTests = testResults.filter(r => r.passed).length;
-  const status = allTestsPassed ? "success" : (passedTests > 0 ? "partial" : "error");
+  const passedTests = testResults.filter((r) => r.passed).length;
+  const status = allTestsPassed
+    ? "success"
+    : passedTests > 0
+    ? "partial"
+    : "error";
 
   await pool.query(
     `UPDATE submissions 
@@ -266,18 +444,20 @@ const runTestCases = async (
          test_results = $5, tests_passed = $6, total_tests = $7, updated_at = CURRENT_TIMESTAMP 
      WHERE submission_id = $8`,
     [
-      JSON.stringify(testResults.map(r => r.actual_output)),
-      JSON.stringify(testResults.filter(r => r.error).map(r => r.error)),
+      JSON.stringify(testResults.map((r) => r.actual_output)),
+      JSON.stringify(testResults.filter((r) => r.error).map((r) => r.error)),
       status,
       totalExecutionTime,
       JSON.stringify(testResults),
       passedTests,
       testResults.length,
-      submissionId
+      submissionId,
     ]
   );
 
-  console.log(`Submission ${submissionId} completed: ${passedTests}/${testResults.length} tests passed`);
+  console.log(
+    `Submission ${submissionId} completed: ${passedTests}/${testResults.length} tests passed`
+  );
 };
 
 const runSingleExecution = async (
@@ -301,7 +481,10 @@ const runSingleExecution = async (
   if (language.toLowerCase() === "java") {
     executeCmd = executeCmd.replace("{className}", className);
   } else if (config.compileCommand) {
-    executeCmd = executeCmd.replace("{output}", path.join(tempDir, `output_${submissionId}`));
+    executeCmd = executeCmd.replace(
+      "{output}",
+      path.join(tempDir, `output_${submissionId}`)
+    );
   } else {
     executeCmd = executeCmd.replace("{file}", path.join(tempDir, fileName));
   }
@@ -323,32 +506,30 @@ const runSingleExecution = async (
 };
 
 const compareOutputs = (actual: string, expected: string): boolean => {
-  // Normalize whitespace
   const normalizeOutput = (output: string) => {
-    return output.trim().replace(/\s+/g, ' ');
+    return output.trim().replace(/\s+/g, " ");
   };
 
   const normalizedActual = normalizeOutput(actual);
   const normalizedExpected = normalizeOutput(expected);
 
-  // Direct comparison
   if (normalizedActual === normalizedExpected) {
     return true;
   }
 
-  // Try JSON comparison for arrays/objects
   try {
     const actualParsed = JSON.parse(actual);
     const expectedParsed = JSON.parse(expected);
-    
+
     if (Array.isArray(actualParsed) && Array.isArray(expectedParsed)) {
-      return JSON.stringify(actualParsed.sort()) === JSON.stringify(expectedParsed.sort());
+      return (
+        JSON.stringify(actualParsed.sort()) ===
+        JSON.stringify(expectedParsed.sort())
+      );
     }
-    
+
     return JSON.stringify(actualParsed) === JSON.stringify(expectedParsed);
-  } catch (e) {
-    // Not JSON, continue with string comparison
-  }
+  } catch (e) {}
 
   return false;
 };
@@ -387,29 +568,29 @@ const executeCommand = (
 
 const processTestCaseInput = (input: string, problemId: string): string => {
   switch (problemId) {
-    case 'two-sum':
+    case "two-sum":
       const numsMatch = input.match(/nums\s*=\s*(\[[\d,\s]+\])/);
       const targetMatch = input.match(/target\s*=\s*(\d+)/);
-      
+
       if (numsMatch && targetMatch) {
         const nums = numsMatch[1];
         const target = targetMatch[1];
-        
+
         return `${nums}\n${target}`;
       }
       break;
-    
-    case 'valid-parentheses':
+
+    case "valid-parentheses":
       const sMatch = input.match(/s\s*=\s*"([^"]*)"/);
       if (sMatch) {
         return sMatch[1];
       }
       break;
-    
+
     default:
       return input;
   }
-  
+
   return input;
 };
 
@@ -444,3 +625,121 @@ process.on("SIGINT", async () => {
   await consumer.disconnect();
   process.exit(0);
 });
+
+const runRawTestCases = async (
+  submissionId: number,
+  problemId: string,
+  tempDir: string,
+  fileName: string,
+  config: LanguageConfig,
+  language: string,
+  startTime: number
+): Promise<void> => {
+  try {
+    const testCasesResult = await pool.query(
+      "SELECT id, input, expected_output, is_sample FROM coding_problem_testcases WHERE problem_id = $1",
+      [problemId]
+    );
+
+    const testCases = testCasesResult.rows;
+    if (testCases.length === 0) {
+      throw new Error(`No test cases found for problem ${problemId}`);
+    }
+
+    let totalTestsPassed = 0;
+    let totalSampleTestsPassed = 0;
+    const totalTests = testCases.length;
+    const totalSampleTests = testCases.filter((tc) => tc.is_sample).length;
+
+    const testResults = [];
+
+    for (const testCase of testCases) {
+      const executable = path.join(
+        tempDir,
+        language.toLowerCase() === "cpp" ? "a.out" : fileName
+      );
+
+      const inputFile = path.join(tempDir, `input_${testCase.id}.txt`);
+
+      const normalizedInput = testCase.input.replace(/\\n/g, "\n");
+
+      fs.writeFileSync(inputFile, testCase.input);
+
+      const executionCommand = `${executable} < ${inputFile}`;
+      const executionResult = await executeCommand(
+        executionCommand,
+        tempDir,
+        5000
+      );
+
+      const actualOutput = executionResult.stdout.trim();
+      const expectedOutput = testCase.expected_output.trim();
+
+      const isCorrect = isOutputCorrect(actualOutput, expectedOutput);
+
+      if (isCorrect) {
+        totalTestsPassed++;
+        if (testCase.is_sample) {
+          totalSampleTestsPassed++;
+        }
+      }
+
+      testResults.push({
+        testCaseId: testCase.id,
+        passed: isCorrect,
+        input: testCase.input,
+        expectedOutput: testCase.expected_output,
+        actualOutput: actualOutput,
+        isSample: testCase.is_sample,
+      });
+    }
+
+    const executionTime = Date.now() - startTime;
+    await pool.query(
+      `UPDATE submissions 
+       SET status = $1, 
+           execution_time = $2, 
+           test_results = $3, 
+           tests_passed = $4, 
+           total_tests = $5, 
+           sample_tests_passed = $6, 
+           total_sample_tests = $7, 
+           updated_at = CURRENT_TIMESTAMP
+       WHERE submission_id = $8`,
+      [
+        totalTestsPassed === totalTests ? "success" : "failed",
+        executionTime,
+        JSON.stringify(testResults),
+        totalTestsPassed,
+        totalTests,
+        totalSampleTestsPassed,
+        totalSampleTests,
+        submissionId,
+      ]
+    );
+  } catch (error) {
+    console.error(
+      `Error running raw test cases for submission ${submissionId}:`,
+      error
+    );
+    throw error;
+  }
+};
+
+const isOutputCorrect = (actual: string, expected: string): boolean => {
+  if (actual === expected) return true;
+
+  const actualTokens = actual
+    .split(/\s+/)
+    .filter((token) => token.trim() !== "");
+  const expectedTokens = expected
+    .split(/\s+/)
+    .filter((token) => token.trim() !== "");
+
+  if (actualTokens.length !== expectedTokens.length) return false;
+
+  const sortedActual = [...actualTokens].sort();
+  const sortedExpected = [...expectedTokens].sort();
+
+  return sortedActual.join(" ") === sortedExpected.join(" ");
+};

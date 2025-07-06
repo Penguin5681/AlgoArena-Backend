@@ -55,4 +55,9 @@ router.delete('/problems/:problemId/templates/:language',
   controller.deleteTemplate.bind(controller)
 );
 
+router.post('/problems/:problemId/submit-raw', 
+  verifyToken, 
+  codeExecutionController.submitRawCodeForProblem.bind(codeExecutionController)
+);
+
 export default router;

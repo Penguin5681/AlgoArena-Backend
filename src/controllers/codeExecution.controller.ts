@@ -240,6 +240,77 @@ export class CodeExecutionController {
     }
   }
 
+  public async submitRawCodeForProblem(req: Request, res: Response): Promise<void> {
+    try {
+      const { problemId } = req.params;
+      const { code, language } = req.body;
+      const userId = (req as any).user.id;
+  
+      if (!problemId || !code || !language) {
+        res.status(400).json({ 
+          success: false, 
+          error: 'Problem ID, code, and language are required' 
+        });
+        return;
+      }
+  
+      // Only support C++ for now
+      if (language.toLowerCase() !== 'cpp') {
+        res.status(400).json({
+          success: false,
+          error: 'Only C++ is supported for raw code submission at this time'
+        });
+        return;
+      }
+  
+      // Create submission record
+            const submissionResult = await pool.query(
+        `INSERT INTO submissions (language, code, status, problem_id, user_id)
+         VALUES ($1, $2, 'pending', $3, $4)
+         RETURNING submission_id`,
+        [language, code, problemId, userId]
+      );
+  
+      const submissionId = submissionResult.rows[0].submission_id;
+  
+      // Send to Kafka for processing
+      const producer = kafka.producer();
+      await producer.connect();
+      
+      await producer.send({
+        topic: 'code_submissions',
+        messages: [{
+          value: JSON.stringify({
+            submissionId,
+            language,
+            code,
+            problemId,
+            userId,
+            isRawSubmission: true // Flag to indicate this is a raw submission
+          })
+        }]
+      });
+  
+      await producer.disconnect();
+  
+      res.json({
+        success: true,
+        data: {
+          submissionId,
+          status: 'pending',
+          message: 'Raw code submitted for testing'
+        }
+      });
+  
+    } catch (error) {
+      console.error('Error submitting raw code:', error);
+      res.status(500).json({ 
+        success: false, 
+        error: 'Failed to submit raw code' 
+      });
+    }
+  }
+
   // Get problem test cases (sample only)
   public async getProblemTestCases(req: Request, res: Response): Promise<void> {
     try {
