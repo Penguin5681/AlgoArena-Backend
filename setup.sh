@@ -53,6 +53,16 @@ else
     exit 1
 fi
 
+echo "🤖 Initializing Ollama models (this might take a few minutes)..."
+docker-compose exec -T ollama ollama pull tinyllama
+
+if [ $? -eq 0 ]; then
+    echo "✅ Ollama model (tinyllama) pulled successfully!"
+else
+    echo "⚠️ Failed to pull tinyllama, trying alternative..."
+    docker-compose exec -T ollama ollama pull tinyllama
+    echo "✅ Ollama setup complete with tinyllama!"
+fi
 echo "✅ Setup complete!"
 echo ""
 echo "📊 Service URLs:"

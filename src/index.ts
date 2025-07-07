@@ -13,6 +13,7 @@ import seedProblemRoutes from './routes/seedProblems.routes';
 import { initializeKafka } from './config/kafka';
 import { startCodeExecutor } from './workers/codeExecutor';
 import codeExecutionRoutes from './routes/codeExecution.routes';
+import analysisRoutes from './routes/analysis.routes';
 
 dotenv.config();
 
@@ -48,6 +49,7 @@ app.use('/api/code', codeRoutes);
 app.use('/api/admin', adminRoutes)
 app.use('/api/seed', seedProblemRoutes);
 app.use('/api/code-execution', codeExecutionRoutes);
+app.use('/api/analysis', analysisRoutes);
 app.use('/', healthRoutes);
 
 const PORT = 5001;

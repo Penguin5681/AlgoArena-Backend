@@ -1,5 +1,5 @@
 version: '3.8'
-
+# Gareeb laptop isse na chalaye, gote phatt jaayenge
 services:
   # PostgreSQL Database
   postgres:
@@ -76,6 +76,8 @@ services:
         condition: service_healthy
       kafka:
         condition: service_healthy
+      ollama:
+        condition: service_started
     environment:
       NODE_ENV: development
       PORT: 5001  
@@ -87,6 +89,8 @@ services:
       KAFKA_GROUP_ID: code-compiler-group
       CODE_EXECUTION_TIMEOUT: 10000
       MAX_CODE_SIZE: 100000
+      OLLAMA_API_URL: http://ollama:11434/api
+      OLLAMA_MODEL: tinyllama
     ports:
       - "5001:5001"  
     volumes:
@@ -100,6 +104,7 @@ services:
 
 volumes:
   postgres_data:
+  ollama_data:
 
 networks:
   app-network:
