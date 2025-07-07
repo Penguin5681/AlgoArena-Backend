@@ -262,13 +262,12 @@ export class CodeExecutionController {
         return;
       }
 
-      const supportedLanguages = ["cpp", "js", "javascript"];
-
+      const supportedLanguages = ["cpp", "javascript", "js", "java", "python"];
       if (!supportedLanguages.includes(language.toLowerCase())) {
         res.status(400).json({
           success: false,
           error:
-            "Only C++ and Javascript are supported for raw code submission at this time",
+            "Only C++, JavaScript, Java, and Python are supported for raw code submission at this time",
         });
         return;
       }
@@ -295,7 +294,7 @@ export class CodeExecutionController {
               code,
               problemId,
               userId,
-              isRawSubmission: true, 
+              isRawSubmission: true,
             }),
           },
         ],

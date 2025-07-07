@@ -4,6 +4,7 @@ import fs from "fs";
 import path from "path";
 import pool from "../config/db";
 import dotenv from "dotenv";
+import { updateUserXPForSolvedProblem } from "../utils/xpManager";
 
 dotenv.config();
 
@@ -102,7 +103,7 @@ const executeCode = async (submission: CodeSubmission): Promise<void> => {
     let fileName = `code_${submissionId}.${config.extension}`;
     let className = `code_${submissionId}`;
 
-    if (language.toLowerCase() === "java" && !isRawSubmission) {
+    if (language.toLowerCase() === "java") {
       const publicClassMatch = code.match(/public\s+class\s+(\w+)/);
       const classMatch = code.match(/class\s+(\w+)/);
 
@@ -179,6 +180,22 @@ const executeCode = async (submission: CodeSubmission): Promise<void> => {
         normalizedLanguage === "js"
       ) {
         await runJavaScriptSubmission(
+          submissionId,
+          problemId,
+          tempDir,
+          filePath,
+          startTime
+        );
+      } else if (normalizedLanguage === "java") {
+        await runJavaSubmission(
+          submissionId,
+          problemId,
+          tempDir,
+          className,
+          startTime
+        );
+      } else if (normalizedLanguage === 'python') {
+        await runPythonSubmission(
           submissionId,
           problemId,
           tempDir,
@@ -300,6 +317,8 @@ const runJavaScriptSubmission = async (
     }
 
     const executionTime = Date.now() - startTime;
+    const isSuccess = totalTestsPassed === testCases.length;
+    
     await pool.query(
       `UPDATE submissions 
        SET status = $1, 
@@ -310,7 +329,7 @@ const runJavaScriptSubmission = async (
            updated_at = CURRENT_TIMESTAMP
        WHERE submission_id = $6`,
       [
-        totalTestsPassed === testCases.length ? "success" : "failed",
+        isSuccess ? "success" : "failed",
         executionTime,
         JSON.stringify(testResults),
         totalTestsPassed,
@@ -318,6 +337,23 @@ const runJavaScriptSubmission = async (
         submissionId,
       ]
     );
+
+    // If all tests passed, update XP
+    if (isSuccess) {
+      try {
+        const submissionResult = await pool.query(
+          'SELECT user_id FROM submissions WHERE submission_id = $1',
+          [submissionId]
+        );
+        
+        if (submissionResult.rows.length > 0) {
+          const userId = submissionResult.rows[0].user_id;
+          await updateUserXPForSolvedProblem(userId, problemId, submissionId);
+        }
+      } catch (error) {
+        console.error('Error updating XP for solved problem:', error);
+      }
+    }
 
     console.log(
       `[Submission ${submissionId}] JavaScript execution completed: ${totalTestsPassed}/${testCases.length} tests passed`
@@ -429,6 +465,8 @@ const runCppSubmission = async (
     }
 
     const executionTime = Date.now() - startTime;
+    const isSuccess = totalTestsPassed === testCases.length;
+    
     await pool.query(
       `UPDATE submissions 
        SET status = $1, 
@@ -439,7 +477,7 @@ const runCppSubmission = async (
            updated_at = CURRENT_TIMESTAMP
        WHERE submission_id = $6`,
       [
-        totalTestsPassed === testCases.length ? "success" : "failed",
+        isSuccess ? "success" : "failed",
         executionTime,
         JSON.stringify(testResults),
         totalTestsPassed,
@@ -448,11 +486,264 @@ const runCppSubmission = async (
       ]
     );
 
+    // If all tests passed, update XP
+    if (isSuccess) {
+      try {
+        // Get user ID from submission
+        const submissionResult = await pool.query(
+          'SELECT user_id FROM submissions WHERE submission_id = $1',
+          [submissionId]
+        );
+        
+        if (submissionResult.rows.length > 0) {
+          const userId = submissionResult.rows[0].user_id;
+          await updateUserXPForSolvedProblem(userId, problemId, submissionId);
+        }
+      } catch (error) {
+        console.error('Error updating XP for solved problem:', error);
+        // Don't fail the submission if XP update fails
+      }
+    }
+
     console.log(
-      `[Submission ${submissionId}] Completed: ${totalTestsPassed}/${testCases.length} tests passed`
+      `[Submission ${submissionId}] C++ execution completed: ${totalTestsPassed}/${testCases.length} tests passed`
     );
   } catch (error) {
     console.error(`[Submission ${submissionId}] Error:`, error);
+    await pool.query(
+      `UPDATE submissions 
+       SET status = 'error', stderr = $1, updated_at = CURRENT_TIMESTAMP 
+       WHERE submission_id = $2`,
+      [error instanceof Error ? error.message : String(error), submissionId]
+    );
+  }
+};
+
+const runJavaSubmission = async (
+  submissionId: number,
+  problemId: string,
+  tempDir: string,
+  className: string,
+  startTime: number
+): Promise<void> => {
+  try {
+    const testCasesResult = await pool.query(
+      "SELECT id, input, expected_output, is_sample FROM coding_problem_testcases WHERE problem_id = $1",
+      [problemId]
+    );
+
+    const testCases = testCasesResult.rows;
+    if (testCases.length === 0) {
+      throw new Error(`No test cases found for problem ${problemId}`);
+    }
+
+    let totalTestsPassed = 0;
+    const testResults = [];
+
+    for (const testCase of testCases) {
+      console.log(
+        `[Submission ${submissionId}] Running Java test case ${testCase.id}`
+      );
+
+      const inputFile = path.join(tempDir, `input_${testCase.id}.txt`);
+      const inputContent = testCase.input.replace(/\\n/g, "\n");
+      fs.writeFileSync(inputFile, inputContent);
+
+      console.log(
+        `[Submission ${submissionId}] Input file content: ${inputContent}`
+      );
+
+      const runCommand = `java ${className} < ${inputFile}`;
+      console.log(`[Submission ${submissionId}] Executing: ${runCommand}`);
+
+      const runResult = await executeCommand(runCommand, tempDir, 5000);
+
+      const actualOutput = runResult.stdout.trim();
+      const expectedOutput = testCase.expected_output.trim();
+      const passed = isOutputCorrect(actualOutput, expectedOutput);
+
+      console.log(`[Submission ${submissionId}] Test ${testCase.id} result:
+        - Expected: "${expectedOutput}"
+        - Actual: "${actualOutput}"
+        - Passed: ${passed}`);
+
+      if (passed) totalTestsPassed++;
+
+      testResults.push({
+        testCaseId: testCase.id,
+        input: testCase.input,
+        expectedOutput,
+        actualOutput,
+        passed,
+        isSample: testCase.is_sample,
+      });
+
+      if (runResult.stderr) {
+        console.log(`[Submission ${submissionId}] Runtime error: ${runResult.stderr}`);
+      }
+    }
+
+    const executionTime = Date.now() - startTime;
+    const isSuccess = totalTestsPassed === testCases.length;
+    
+    await pool.query(
+      `UPDATE submissions 
+       SET status = $1, 
+           execution_time = $2, 
+           test_results = $3, 
+           tests_passed = $4, 
+           total_tests = $5, 
+           updated_at = CURRENT_TIMESTAMP
+       WHERE submission_id = $6`,
+      [
+        isSuccess ? "success" : "failed",
+        executionTime,
+        JSON.stringify(testResults),
+        totalTestsPassed,
+        testCases.length,
+        submissionId,
+      ]
+    );
+
+    // If all tests passed, update XP
+    if (isSuccess) {
+      try {
+        const submissionResult = await pool.query(
+          'SELECT user_id FROM submissions WHERE submission_id = $1',
+          [submissionId]
+        );
+        
+        if (submissionResult.rows.length > 0) {
+          const userId = submissionResult.rows[0].user_id;
+          await updateUserXPForSolvedProblem(userId, problemId, submissionId);
+        }
+      } catch (error) {
+        console.error('Error updating XP for solved problem:', error);
+      }
+    }
+
+    console.log(
+      `[Submission ${submissionId}] Java execution completed: ${totalTestsPassed}/${testCases.length} tests passed`
+    );
+  } catch (error) {
+    console.error(`[Submission ${submissionId}] Java execution error:`, error);
+    await pool.query(
+      `UPDATE submissions 
+       SET status = 'error', stderr = $1, updated_at = CURRENT_TIMESTAMP 
+       WHERE submission_id = $2`,
+      [error instanceof Error ? error.message : String(error), submissionId]
+    );
+  }
+};
+
+const runPythonSubmission = async (
+  submissionId: number,
+  problemId: string,
+  tempDir: string,
+  sourceFile: string,
+  startTime: number
+): Promise<void> => {
+  try {
+    const testCasesResult = await pool.query(
+      "SELECT id, input, expected_output, is_sample FROM coding_problem_testcases WHERE problem_id = $1",
+      [problemId]
+    );
+
+    const testCases = testCasesResult.rows;
+    if (testCases.length === 0) {
+      throw new Error(`No test cases found for problem ${problemId}`);
+    }
+
+    let totalTestsPassed = 0;
+    const testResults = [];
+
+    for (const testCase of testCases) {
+      console.log(
+        `[Submission ${submissionId}] Running Python test case ${testCase.id}`
+      );
+
+      const inputFile = path.join(tempDir, `input_${testCase.id}.txt`);
+      const inputContent = testCase.input.replace(/\\n/g, "\n");
+      fs.writeFileSync(inputFile, inputContent);
+
+      console.log(
+        `[Submission ${submissionId}] Input file content: ${inputContent}`
+      );
+
+      const runCommand = `python3 ${sourceFile} < ${inputFile}`;
+      console.log(`[Submission ${submissionId}] Executing: ${runCommand}`);
+
+      const runResult = await executeCommand(runCommand, tempDir, 5000);
+
+      const actualOutput = runResult.stdout.trim();
+      const expectedOutput = testCase.expected_output.trim();
+      const passed = isOutputCorrect(actualOutput, expectedOutput);
+
+      console.log(`[Submission ${submissionId}] Test ${testCase.id} result:
+        - Expected: "${expectedOutput}"
+        - Actual: "${actualOutput}"
+        - Passed: ${passed}`);
+
+      if (passed) totalTestsPassed++;
+
+      testResults.push({
+        testCaseId: testCase.id,
+        input: testCase.input,
+        expectedOutput,
+        actualOutput,
+        passed,
+        isSample: testCase.is_sample,
+      });
+
+      if (runResult.stderr) {
+        console.log(`[Submission ${submissionId}] Runtime error: ${runResult.stderr}`);
+      }
+    }
+
+    const executionTime = Date.now() - startTime;
+    const isSuccess = totalTestsPassed === testCases.length;
+    
+    await pool.query(
+      `UPDATE submissions 
+       SET status = $1, 
+           execution_time = $2, 
+           test_results = $3, 
+           tests_passed = $4, 
+           total_tests = $5, 
+           updated_at = CURRENT_TIMESTAMP
+       WHERE submission_id = $6`,
+      [
+        isSuccess ? "success" : "failed",
+        executionTime,
+        JSON.stringify(testResults),
+        totalTestsPassed,
+        testCases.length,
+        submissionId,
+      ]
+    );
+
+    // If all tests passed, update XP
+    if (isSuccess) {
+      try {
+        const submissionResult = await pool.query(
+          'SELECT user_id FROM submissions WHERE submission_id = $1',
+          [submissionId]
+        );
+        
+        if (submissionResult.rows.length > 0) {
+          const userId = submissionResult.rows[0].user_id;
+          await updateUserXPForSolvedProblem(userId, problemId, submissionId);
+        }
+      } catch (error) {
+        console.error('Error updating XP for solved problem:', error);
+      }
+    }
+
+    console.log(
+      `[Submission ${submissionId}] Python execution completed: ${totalTestsPassed}/${testCases.length} tests passed`
+    );
+  } catch (error) {
+    console.error(`[Submission ${submissionId}] Python execution error:`, error);
     await pool.query(
       `UPDATE submissions 
        SET status = 'error', stderr = $1, updated_at = CURRENT_TIMESTAMP 

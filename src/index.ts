@@ -14,6 +14,7 @@ import { initializeKafka } from './config/kafka';
 import { startCodeExecutor } from './workers/codeExecutor';
 import codeExecutionRoutes from './routes/codeExecution.routes';
 import analysisRoutes from './routes/analysis.routes';
+import xpRoutes from './routes/xp.routes';
 
 dotenv.config();
 
@@ -50,6 +51,7 @@ app.use('/api/admin', adminRoutes)
 app.use('/api/seed', seedProblemRoutes);
 app.use('/api/code-execution', codeExecutionRoutes);
 app.use('/api/analysis', analysisRoutes);
+app.use('/api/xp', xpRoutes);
 app.use('/', healthRoutes);
 
 const PORT = 5001;
