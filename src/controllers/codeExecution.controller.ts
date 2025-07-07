@@ -1,33 +1,35 @@
-import { Request, Response } from 'express';
-import pool from '../config/db';
-import { kafka } from '../config/kafka';
+import { Request, Response } from "express";
+import pool from "../config/db";
+import { kafka } from "../config/kafka";
 
 export class CodeExecutionController {
-  
-  public async submitCodeForProblem(req: Request, res: Response): Promise<void> {
+  public async submitCodeForProblem(
+    req: Request,
+    res: Response
+  ): Promise<void> {
     try {
       const { problemId } = req.params;
       const { language, code } = req.body;
-      const userId = (req as any).user?.id; 
+      const userId = (req as any).user?.id;
 
       if (!problemId || !language || !code) {
-        res.status(400).json({ 
-          success: false, 
-          error: 'Problem ID, language, and code are required' 
+        res.status(400).json({
+          success: false,
+          error: "Problem ID, language, and code are required",
         });
         return;
       }
 
       // Verify problem exists
       const problemResult = await pool.query(
-        'SELECT id, title FROM coding_problems WHERE id = $1',
+        "SELECT id, title FROM coding_problems WHERE id = $1",
         [problemId]
       );
 
       if (problemResult.rows.length === 0) {
-        res.status(404).json({ 
-          success: false, 
-          error: 'Problem not found' 
+        res.status(404).json({
+          success: false,
+          error: "Problem not found",
         });
         return;
       }
@@ -45,18 +47,20 @@ export class CodeExecutionController {
       // Send to Kafka for processing
       const producer = kafka.producer();
       await producer.connect();
-      
+
       await producer.send({
-        topic: 'code_submissions',
-        messages: [{
-          value: JSON.stringify({
-            submissionId,
-            language,
-            code,
-            problemId,
-            userId
-          })
-        }]
+        topic: "code_submissions",
+        messages: [
+          {
+            value: JSON.stringify({
+              submissionId,
+              language,
+              code,
+              problemId,
+              userId,
+            }),
+          },
+        ],
       });
 
       await producer.disconnect();
@@ -65,30 +69,32 @@ export class CodeExecutionController {
         success: true,
         data: {
           submissionId,
-          status: 'pending',
-          message: 'Code submitted for testing'
-        }
+          status: "pending",
+          message: "Code submitted for testing",
+        },
       });
-
     } catch (error) {
-      console.error('Error submitting code:', error);
-      res.status(500).json({ 
-        success: false, 
-        error: 'Failed to submit code' 
+      console.error("Error submitting code:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to submit code",
       });
     }
   }
 
   // Submit code for compilation only (no test cases)
-  public async submitCodeForCompilation(req: Request, res: Response): Promise<void> {
+  public async submitCodeForCompilation(
+    req: Request,
+    res: Response
+  ): Promise<void> {
     try {
       const { language, code, stdin } = req.body;
       const userId = (req as any).user?.id;
 
       if (!language || !code) {
-        res.status(400).json({ 
-          success: false, 
-          error: 'Language and code are required' 
+        res.status(400).json({
+          success: false,
+          error: "Language and code are required",
         });
         return;
       }
@@ -106,17 +112,19 @@ export class CodeExecutionController {
       // Send to Kafka for processing
       const producer = kafka.producer();
       await producer.connect();
-      
+
       await producer.send({
-        topic: 'code_submissions',
-        messages: [{
-          value: JSON.stringify({
-            submissionId,
-            language,
-            code,
-            stdin
-          })
-        }]
+        topic: "code_submissions",
+        messages: [
+          {
+            value: JSON.stringify({
+              submissionId,
+              language,
+              code,
+              stdin,
+            }),
+          },
+        ],
       });
 
       await producer.disconnect();
@@ -125,16 +133,15 @@ export class CodeExecutionController {
         success: true,
         data: {
           submissionId,
-          status: 'pending',
-          message: 'Code submitted for compilation'
-        }
+          status: "pending",
+          message: "Code submitted for compilation",
+        },
       });
-
     } catch (error) {
-      console.error('Error submitting code:', error);
-      res.status(500).json({ 
-        success: false, 
-        error: 'Failed to submit code' 
+      console.error("Error submitting code:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to submit code",
       });
     }
   }
@@ -153,9 +160,9 @@ export class CodeExecutionController {
       );
 
       if (result.rows.length === 0) {
-        res.status(404).json({ 
-          success: false, 
-          error: 'Submission not found' 
+        res.status(404).json({
+          success: false,
+          error: "Submission not found",
         });
         return;
       }
@@ -176,15 +183,14 @@ export class CodeExecutionController {
           testsPassed: submission.tests_passed,
           totalTests: submission.total_tests,
           createdAt: submission.created_at,
-          updatedAt: submission.updated_at
-        }
+          updatedAt: submission.updated_at,
+        },
       });
-
     } catch (error) {
-      console.error('Error fetching submission:', error);
-      res.status(500).json({ 
-        success: false, 
-        error: 'Failed to fetch submission' 
+      console.error("Error fetching submission:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to fetch submission",
       });
     }
   }
@@ -226,113 +232,114 @@ export class CodeExecutionController {
           submissions: result.rows,
           pagination: {
             limit: parseInt(limit as string),
-            offset: parseInt(offset as string)
-          }
-        }
+            offset: parseInt(offset as string),
+          },
+        },
       });
-
     } catch (error) {
-      console.error('Error fetching user submissions:', error);
-      res.status(500).json({ 
-        success: false, 
-        error: 'Failed to fetch submissions' 
+      console.error("Error fetching user submissions:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to fetch submissions",
       });
     }
   }
 
-  public async submitRawCodeForProblem(req: Request, res: Response): Promise<void> {
+  public async submitRawCodeForProblem(
+    req: Request,
+    res: Response
+  ): Promise<void> {
     try {
       const { problemId } = req.params;
       const { code, language } = req.body;
       const userId = (req as any).user.id;
-  
+
       if (!problemId || !code || !language) {
-        res.status(400).json({ 
-          success: false, 
-          error: 'Problem ID, code, and language are required' 
-        });
-        return;
-      }
-  
-      // Only support C++ for now
-      if (language.toLowerCase() !== 'cpp') {
         res.status(400).json({
           success: false,
-          error: 'Only C++ is supported for raw code submission at this time'
+          error: "Problem ID, code, and language are required",
         });
         return;
       }
-  
-      // Create submission record
-            const submissionResult = await pool.query(
+
+      const supportedLanguages = ["cpp", "js", "javascript"];
+
+      if (!supportedLanguages.includes(language.toLowerCase())) {
+        res.status(400).json({
+          success: false,
+          error:
+            "Only C++ and Javascript are supported for raw code submission at this time",
+        });
+        return;
+      }
+
+      const submissionResult = await pool.query(
         `INSERT INTO submissions (language, code, status, problem_id, user_id)
          VALUES ($1, $2, 'pending', $3, $4)
          RETURNING submission_id`,
         [language, code, problemId, userId]
       );
-  
+
       const submissionId = submissionResult.rows[0].submission_id;
-  
-      // Send to Kafka for processing
+
       const producer = kafka.producer();
       await producer.connect();
-      
+
       await producer.send({
-        topic: 'code_submissions',
-        messages: [{
-          value: JSON.stringify({
-            submissionId,
-            language,
-            code,
-            problemId,
-            userId,
-            isRawSubmission: true // Flag to indicate this is a raw submission
-          })
-        }]
+        topic: "code_submissions",
+        messages: [
+          {
+            value: JSON.stringify({
+              submissionId,
+              language,
+              code,
+              problemId,
+              userId,
+              isRawSubmission: true, 
+            }),
+          },
+        ],
       });
-  
+
       await producer.disconnect();
-  
+
       res.json({
         success: true,
         data: {
           submissionId,
-          status: 'pending',
-          message: 'Raw code submitted for testing'
-        }
+          status: "pending",
+          message: "Raw code submitted for testing",
+        },
       });
-  
     } catch (error) {
-      console.error('Error submitting raw code:', error);
-      res.status(500).json({ 
-        success: false, 
-        error: 'Failed to submit raw code' 
+      console.error("Error submitting raw code:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to submit raw code",
       });
     }
   }
 
-  // Get problem test cases (sample only)
   public async getProblemTestCases(req: Request, res: Response): Promise<void> {
     try {
       const { problemId } = req.params;
 
       const result = await pool.query(
-        'SELECT id, input, expected_output FROM coding_problem_testcases WHERE problem_id = $1 AND is_sample = true ORDER BY id',
+        "SELECT id, input, expected_output FROM coding_problem_testcases WHERE problem_id = $1 AND is_sample = true ORDER BY id",
         [problemId]
       );
 
       res.json({
         success: true,
         data: {
-          testCases: result.rows
-        }
+          testCases: result.rows,
+        },
       });
-
     } catch (error) {
-      console.error('Error fetching test cases:', error);
-      res.status(500).json({ 
-        success: false, 
-        error: 'Failed to fetch test cases' 
+      console.error("Error fetching test cases:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to fetch test cases",
       });
     }
   }

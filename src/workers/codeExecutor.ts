@@ -56,6 +56,10 @@ const languageConfigsTest: Record<string, LanguageConfig> = {
     extension: "js",
     executeCommand: "node {file}",
   },
+  js: {
+    extension: "js",
+    executeCommand: "node {file}"
+  },
   java: {
     extension: "java",
     compileCommand: "javac {file}",
@@ -161,8 +165,20 @@ const executeCode = async (submission: CodeSubmission): Promise<void> => {
     }
 
     if (isRawSubmission && problemId) {
-      if (language.toLowerCase() === "cpp") {
-        await await runCppSubmission(
+      const normalizedLanguage = language.toLowerCase();
+      if (normalizedLanguage === "cpp") {
+        await runCppSubmission(
+          submissionId,
+          problemId,
+          tempDir,
+          filePath,
+          startTime
+        );
+      } else if (
+        normalizedLanguage === "javascript" ||
+        normalizedLanguage === "js"
+      ) {
+        await runJavaScriptSubmission(
           submissionId,
           problemId,
           tempDir,
@@ -216,6 +232,104 @@ const executeCode = async (submission: CodeSubmission): Promise<void> => {
     if (fs.existsSync(tempDir)) {
       fs.rmSync(tempDir, { recursive: true, force: true });
     }
+  }
+};
+
+const runJavaScriptSubmission = async (
+  submissionId: number,
+  problemId: string,
+  tempDir: string,
+  sourceFile: string,
+  startTime: number
+): Promise<void> => {
+  try {
+    const testCasesResult = await pool.query(
+      "SELECT id, input, expected_output, is_sample FROM coding_problem_testcases WHERE problem_id = $1",
+      [problemId]
+    );
+
+    const testCases = testCasesResult.rows;
+    if (testCases.length === 0) {
+      throw new Error(`No test cases found for problem ${problemId}`);
+    }
+
+    let totalTestsPassed = 0;
+    const testResults = [];
+
+    for (const testCase of testCases) {
+      console.log(
+        `[Submission ${submissionId}] Running JavaScript test case ${testCase.id}`
+      );
+
+      const inputFile = path.join(tempDir, `input_${testCase.id}.txt`);
+      const inputContent = testCase.input.replace(/\\n/g, "\n");
+      fs.writeFileSync(inputFile, inputContent);
+
+      console.log(
+        `[Submission ${submissionId}] Input file content: ${inputContent}`
+      );
+
+      const runCommand = `node ${sourceFile} < ${inputFile}`;
+      console.log(`[Submission ${submissionId}] Executing: ${runCommand}`);
+
+      const runResult = await executeCommand(runCommand, tempDir, 5000);
+
+      const actualOutput = runResult.stdout.trim();
+      const expectedOutput = testCase.expected_output.trim();
+      const passed = isOutputCorrect(actualOutput, expectedOutput);
+
+      console.log(`[Submission ${submissionId}] Test ${testCase.id} result:
+        - Expected: "${expectedOutput}"
+        - Actual: "${actualOutput}"
+        - Passed: ${passed}`);
+
+      if (passed) totalTestsPassed++;
+
+      testResults.push({
+        testCaseId: testCase.id,
+        input: testCase.input,
+        expectedOutput,
+        actualOutput,
+        passed,
+        isSample: testCase.is_sample,
+      });
+
+      if (runResult.stderr) {
+        console.log(`[Submission ${submissionId}] Runtime error: ${runResult.stderr}`);
+      }
+    }
+
+    const executionTime = Date.now() - startTime;
+    await pool.query(
+      `UPDATE submissions 
+       SET status = $1, 
+           execution_time = $2, 
+           test_results = $3, 
+           tests_passed = $4, 
+           total_tests = $5, 
+           updated_at = CURRENT_TIMESTAMP
+       WHERE submission_id = $6`,
+      [
+        totalTestsPassed === testCases.length ? "success" : "failed",
+        executionTime,
+        JSON.stringify(testResults),
+        totalTestsPassed,
+        testCases.length,
+        submissionId,
+      ]
+    );
+
+    console.log(
+      `[Submission ${submissionId}] JavaScript execution completed: ${totalTestsPassed}/${testCases.length} tests passed`
+    );
+  } catch (error) {
+    console.error(`[Submission ${submissionId}] JavaScript execution error:`, error);
+    await pool.query(
+      `UPDATE submissions 
+       SET status = 'error', stderr = $1, updated_at = CURRENT_TIMESTAMP 
+       WHERE submission_id = $2`,
+      [error instanceof Error ? error.message : String(error), submissionId]
+    );
   }
 };
 
