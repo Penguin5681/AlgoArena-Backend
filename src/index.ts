@@ -15,6 +15,8 @@ import { startCodeExecutor } from './workers/codeExecutor';
 import codeExecutionRoutes from './routes/codeExecution.routes';
 import analysisRoutes from './routes/analysis.routes';
 import xpRoutes from './routes/xp.routes';
+import userRoutes from './routes/user.routes';
+import profileRoutes from './routes/profile.routes';
 
 dotenv.config();
 
@@ -52,6 +54,8 @@ app.use('/api/seed', seedProblemRoutes);
 app.use('/api/code-execution', codeExecutionRoutes);
 app.use('/api/analysis', analysisRoutes);
 app.use('/api/xp', xpRoutes);
+app.use('/api/user', userRoutes);
+app.use('/api/profile', profileRoutes);
 app.use('/', healthRoutes);
 
 const PORT = 5001;

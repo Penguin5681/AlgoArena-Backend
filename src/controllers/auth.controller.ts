@@ -29,6 +29,8 @@ export const loginUser = async (req: Request, res: Response) => {
     );
     const user = result.rows[0];
 
+    console.log(user);
+
     if (!user || !(await bcrypt.compare(password, user.password))) {
       return res.status(401).json({ error: "Invalid credentials" });
     }
@@ -43,6 +45,7 @@ export const loginUser = async (req: Request, res: Response) => {
         id: user.id,
         username: user.username,
         email: user.email,
+        profile_picture: user.profile_picture
       },
     });
   } catch (err) {
