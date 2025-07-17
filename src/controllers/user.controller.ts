@@ -87,3 +87,38 @@ export const getUserProfilePicture = async (req: Request, res: Response) => {
     res.status(500).json({ message: "Failed to get profile" });
   }
 };
+
+export const recordUserActivity = async (req: Request, res: Response) => {
+  const { userId } = req.body;
+
+  try {
+    await pool.query(`
+      INSERT INTO user_activity_heatmap (user_id, activity_date, activity_count)
+      VALUES ($1, CURRENT_DATE, 1)
+      ON CONFLICT (user_id, activity_date)
+      DO UPDATE SET activity_count = user_activity_heatmap.activity_count + 1;
+    `, [userId]);
+
+    res.status(200).json({ message: 'Activity recorded' });
+  } catch (error) {
+    console.error('Error recording activity:', error);
+    res.status(500).json({ message: 'Failed to record activity' });
+  }
+};
+
+export const getUserActivityHeatmap = async (req: Request, res: Response) => {
+  const userId = req.params.userId;
+
+  try {
+    const result = await pool.query(`
+      SELECT activity_date, activity_count
+      FROM user_activity_heatmap
+      WHERE user_id = $1
+    `, [userId]);
+
+    res.status(200).json(result.rows);
+  } catch (error) {
+    console.error('Failed to fetch heatmap:', error);
+    res.status(500).json({ message: 'Error fetching heatmap' });
+  }
+};

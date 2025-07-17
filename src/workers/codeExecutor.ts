@@ -5,6 +5,7 @@ import path from "path";
 import pool from "../config/db";
 import dotenv from "dotenv";
 import { updateUserXPForSolvedProblem } from "../utils/xpManager";
+import { recordUserActivity } from "../controllers/user.controller";
 
 dotenv.config();
 
@@ -338,7 +339,6 @@ const runJavaScriptSubmission = async (
       ]
     );
 
-    // If all tests passed, update XP
     if (isSuccess) {
       try {
         const submissionResult = await pool.query(
@@ -486,10 +486,8 @@ const runCppSubmission = async (
       ]
     );
 
-    // If all tests passed, update XP
     if (isSuccess) {
       try {
-        // Get user ID from submission
         const submissionResult = await pool.query(
           'SELECT user_id FROM submissions WHERE submission_id = $1',
           [submissionId]
@@ -501,7 +499,6 @@ const runCppSubmission = async (
         }
       } catch (error) {
         console.error('Error updating XP for solved problem:', error);
-        // Don't fail the submission if XP update fails
       }
     }
 

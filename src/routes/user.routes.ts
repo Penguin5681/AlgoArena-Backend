@@ -1,9 +1,10 @@
 import { Router } from "express";
-import { updateUserProfile } from "../controllers/user.controller";
-import { verifyToken } from "../middlewares/auth.middleware";
+import { getUserActivityHeatmap, recordUserActivity, updateUserProfile } from "../controllers/user.controller";
 
 const router = Router();
 
 router.put("/profile", updateUserProfile);
+router.post("/record-activity", recordUserActivity);
+router.get("/get-heatmap/:userId", getUserActivityHeatmap);
 
 export default router;
