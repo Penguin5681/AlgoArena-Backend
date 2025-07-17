@@ -76,8 +76,6 @@ services:
         condition: service_healthy
       kafka:
         condition: service_healthy
-      ollama:
-        condition: service_started
     environment:
       NODE_ENV: development
       PORT: 5001  
