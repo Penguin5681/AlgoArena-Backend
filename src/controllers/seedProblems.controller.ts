@@ -68,7 +68,6 @@ export class SeedProblemsController {
         return;
       }
 
-      // Read JSON file
       const fullPath = path.resolve(filePath);
 
       if (!fs.existsSync(fullPath)) {

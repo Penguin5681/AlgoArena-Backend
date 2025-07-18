@@ -183,17 +183,6 @@ try {
     exit 1
 }
 
-Write-Host "🤖 Initializing Ollama models (this might take a few minutes)..." -ForegroundColor Yellow
-docker-compose exec -T ollama ollama pull tinyllama
-
-if ($LASTEXITCODE -eq 0) {
-    Write-Host "✅ Ollama model (tinyllama) pulled successfully!" -ForegroundColor Green
-} else {
-    Write-Host "⚠️ Failed to pull tinyllama, trying alternative..." -ForegroundColor Yellow
-    docker-compose exec -T ollama ollama pull tinyllama
-    Write-Host "✅ Ollama setup complete with tinyllama!" -ForegroundColor Green
-}
-
 Write-Host ""
 Write-Host "✅ Setup complete!" -ForegroundColor Green
 Write-Host ""
