@@ -1,3 +1,5 @@
 node_modules/
 build/
 tmp-upload/
+.idea/
+init-db/
