@@ -93,7 +93,6 @@ export const getUserProfile = async (req: Request, res: Response) => {
   }
 };
 
-// PATCH /api/profile/update
 export const updateFullProfile = async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
 

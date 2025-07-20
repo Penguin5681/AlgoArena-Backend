@@ -20,6 +20,7 @@ import analysisRoutes from "./routes/analysis.routes";
 import xpRoutes from "./routes/xp.routes";
 import userRoutes from "./routes/user.routes";
 import profileRoutes from "./routes/profile.routes";
+import leaderboardRoutes from "./routes/leaderboard.routes";
 
 dotenv.config();
 
@@ -62,6 +63,7 @@ app.use("/api/analysis", analysisRoutes);
 app.use("/api/xp", xpRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/profile", profileRoutes);
+app.use("/api/leaderboard", leaderboardRoutes);
 app.use("/", healthRoutes);
 
 const PORT = 5001;

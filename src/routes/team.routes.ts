@@ -1,5 +1,5 @@
 import express from 'express';
-import { createTeam, deleteTeam, demoteAdmin, getCurrentTeam, getTeamInfo, joinTeam, leaveTeam, promoteToAdmin } from '../controllers/teams.controller';
+import { createTeam, deleteTeam, demoteAdmin, getCurrentTeam, getTeamInfo, getTeamLeaderboard, joinTeam, leaveTeam, promoteToAdmin } from '../controllers/teams.controller';
 import { verifyToken } from '../middlewares/auth.middleware';
 
 const router = express.Router();
@@ -12,5 +12,6 @@ router.get('/teamInfo', verifyToken, getTeamInfo);
 router.get('/current', verifyToken, getCurrentTeam);
 router.post('/promote', verifyToken, promoteToAdmin);
 router.post('/demote', verifyToken, demoteAdmin);
+router.get('/:teamId/leaderboard', verifyToken, getTeamLeaderboard);
 
 export default router;

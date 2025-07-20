@@ -286,3 +286,63 @@ export const demoteAdmin = async (req: Request, res: Response) => {
     res.status(500).json({ error: "Server error while demoting admin" });
   }
 };
+
+export const getTeamLeaderboard = async (req: Request, res: Response) => {
+    const userId = (req as any).user.id;
+    const { teamId } = req.params;
+    const { page = 1, limit = 20 } = req.query;
+    const offset = (Number(page) - 1) * Number(limit);
+
+    try {
+        // Check if user is part of the team
+        const memberCheck = await pool.query(
+            'SELECT 1 FROM team_members WHERE user_id = $1 AND team_id = $2',
+            [userId, teamId]
+        );
+
+        if (memberCheck.rowCount === 0) {
+            return res.status(403).json({ success: false, error: "You are not a member of this team." });
+        }
+
+        // Get total number of members in the team for pagination
+        const countResult = await pool.query("SELECT COUNT(*) FROM team_members WHERE team_id = $1", [teamId]);
+        const totalMembers = parseInt(countResult.rows[0].count, 10);
+
+        // Get team members' info and rank them by XP
+        const leaderboardResult = await pool.query(
+            `SELECT 
+                u.id, u.username, u.email, u.github_link, u.linkedin_link, u.facebook_link, 
+                u.rank, u.bio, u.tech_stack, u.programming_languages, u.role,
+                u.badges, u.profile_picture,
+                COALESCE(utx.total_xp, 0) AS total_xp,
+                tm.is_admin
+             FROM users u
+             JOIN team_members tm ON u.id = tm.user_id
+             LEFT JOIN user_total_xp utx ON u.id = utx.user_id
+             WHERE tm.team_id = $1
+             ORDER BY total_xp DESC, u.username ASC
+             LIMIT $2 OFFSET $3`,
+            [teamId, limit, offset]
+        );
+
+        res.json({
+            success: true,
+            data: {
+                totalMembers,
+                members: leaderboardResult.rows,
+                pagination: {
+                    page: Number(page),
+                    limit: Number(limit),
+                    totalPages: Math.ceil(totalMembers / Number(limit))
+                }
+            }
+        });
+
+    } catch (error) {
+        console.error("Error fetching team leaderboard:", error);
+        res.status(500).json({
+            success: false,
+            error: "Failed to fetch team leaderboard"
+        });
+    }
+};
